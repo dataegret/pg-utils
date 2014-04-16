@@ -14,7 +14,7 @@ Searhes the tables which do not have UNIQUE CONSTRAINTs.
 ### create_db_activity_view9.2.sql and create_db_activity_view.sql
 Creating VIEWs for viewing running postgres processes with transactions in which the runtime is more than 100ms, and queries with runtime more than 500ms. Requires enabled track_activities in postgresql.conf for proper display the state of processes. This views allows to view only running processes, cutting idle processes. create_db_activity_view.sql is used in PostgreSQL version 9.1 and older, create_db_activity_view9.2.sql used since PostgreSQL 9.2.
 
-Fields:
+Columns:
 
 * ts_age - transaction runtime
 
@@ -39,88 +39,81 @@ Fields:
 * query - query text which is currently executed in process;
 
 ### create_query_stat_cpu_time_view.sql
-
-Создание VIEW query_stat_cpu_time которая отображает информацию о запросах (включая текст запросов) с временем выполнения >= 0.02 секунд (без учета времени выполнения IO). Требует наличия  pg_stat_statements и опционально включенного  track_io_timings. (Описание полей ниже в create_query_stat_time_view.sql)
+Creating query_stat_cpu_time VIEW for viewing queries with runtime more or equal 0.02 seconds (IO time not accounting). Require enabled pg_stat_statements and optionally track_io_timings enabled in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
 
 ### create_query_stat_io_time_view.sql
-
-Создание VIEW query_stat_io_time которая отображает информацию о запросах (включая текст запросов) с временем выполнения блочного ввода-вывод >= 0.02 секунд. Требует наличия  pg_stat_statements и включения  track_io_timings. (Описание полей ниже в create_query_stat_time_view.sql)
+Creating query_stat_io_time VIEW for viewing queries with IO time more or equal 0.02 seconds. Also require pg_stat_statements and track_io_timings in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
 
 ### create_query_stat_log.sql
 
 ### create_query_stat_time_view.sql
+Creating query_stat_time VIEW for viewing queries with total runtime more or equal 0.02 seconds (time spent on block IO also included). Require enabled pg_stat_statements and track_io_timings in postgresql.conf.
 
-Создание VIEW query_stat_time которая отображает информацию о запросах (включая текст запросов) с общим временем >= 0.02 секунд (в т.ч. и блочного IO). Требует наличия  pg_stat_statements и опционального включения  track_io_timings.
+Columns:
 
-Колонки:
+* time_percent - total query runtime measured in %, relative to the runtime of all queries;
 
-* time_percent - общее время выполнения запроса в %, на фоне времени выполнения всех запросов
+* iotime_percent - query time spent on block IO in %, relative to the runtime of all queries;
 
-* iotime_percent - время выполнения блочного ввода-вывода в %, на фоне общего для всех запросов времени выполнения блочного IO
+* cputime_percent - query runtime  (without time spent on block IO) in %, relative to the runtime of all queries;
 
-* cputime_percent - время выполнения (без учета блочного IO) в %, на фоне общего для всех запросов времени (без учета выполнения блочного IO)
+* total_time - total runtime of this query;
 
-* total_time - общее время выполнения всех вызовов данного запроса
+* avg_time - average runtime for this query;
 
-* avg_time - среднее время выполнения для запроса
+* avg_io_time - average time spent on IO for this query;
 
-* avg_io_time - среднее время выполнения блочного IO для запроса
+* calls - numbers of calls for this query;
 
-* calls - количество вызовов текущего запроса
+* calls_percent - numbers of calls for this query in %, relative to the all queries calls;
 
-* calls_percent - количество вызовов текущего запроса в %, от общего числа вызовов всех запросов
+* rows - number of rows was returned by this query;
 
-* rows - количество строк возвращенное в результате выполнения текущего запроса
+* row_percent - row was returned by this query in %, relative to the all rows returned by all others queries;
 
-* row_percent - количество строк возвращенное в результате выполнения текущего запроса в %, на фоне числа строк возвращенными всеми запросами
+* query - query text
 
-* query - текст запроса
-
-Замечание: все запросы, время выполнения которых меньше 0.02 секунд, суммируются в отдельную строку с query = other.
-
-Применение:
+Note: all queries which runtime less 0.02 seconds, accounts into dedicated 'other' query.
 
 ### create_slonik_set_full.sql
 
 ### create slonik_set_incremental.sql
 
 ### create_xlog_math_procedures.sql
+This snippets create following funtions:
 
-Создание трех функций:
+* xlog_location_numeric - shows current WAL position in decimal expression.
 
-* xlog_location_numeric - показывает текущую позицию записи WAL журнала в десятичном выражении.
+* replay_lag_mb - shows estimated lag between master and standby server in megabytes.
 
-* replay_lag_mb - показывает приблизительное отставание по записи WAL в мегабайтах.
+* all_replayed - returns true if all WAL are replayed (zero lag).
 
-* all_replayed - возвращает true если воспроизведены все WAL (т.е. лаг отсутствует)
-
-Применение:
+Usage: ???
 
 ### db_activity.sql and db_activity9.2.sql
 
 ### dirty_to_read_stat.sql
+Some statistics for "dirty" buffers. Require pg_buffercache extensions.
 
-Статистика чтения "dirty" данных. Требует наличия  pg_buffercache
+Columns: relation - object name and schema which object belongs;
 
-Колонки: relation - имя объекта (+схема)
+* relkind - object type (r = ordinary table, i = index, S = sequence, v = view, c = composite type, t = TOAST table);
 
-* relkind - тип объекта из r = ordinary table, i = index, S = sequence, v = view, c = composite type, t = TOAST table
+* tblsp - tablespace in which object is stored;
 
-* tblsp - tablespace
+* relsize - object size, in megabytes;
 
-* relsize - размер таблицы, в MB
+* %_cached - estimated amount of pages in %, which is cached;
 
-* %_cached - приблизительный объем страниц, в кэше в %
+* disk_read - read directly from disk (difference between values from pg_stat_get_blocks_fetched and pg_stat_get_blocks_hit);
 
-* disk_read - объем прочитанных данных с диска (разница значений из функций pg_stat_get_blocks_fetched и pg_stat_get_blocks_hit)
+* dirty_size - dirty pages size, in megabytes;
 
-* dirty_size - объем измененных страниц, в Mb
+* buffer_data.%_dirty - dirty pages, in %;
 
-* buffer_data.%_dirty - объем измененных страниц, в %
+* read_to_dirty_ratio - ratio of the amount of data read from the disk to the amount of dirty pages, i.e. average amount of reading per dirty.
 
-* read_to_dirty_ratio - оношение объема прочитанных данных с диска к количеству "грязных" страниц, т.е. количество чтения на одну грязную страницу в среднем
-
-Применение:
+Udage: ???
 
 ### generate_drop_items.sql
 
