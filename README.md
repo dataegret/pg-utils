@@ -9,42 +9,34 @@
 ### check_strange_fk.sql
 
 ### check_uniq_indexes.sql
-Поиск таблиц у которых отсутствуют UNIQUE CONSTRAINT.
+Searhes the tables which do not have UNIQUE CONSTRAINTs.
 
 ### create_db_activity_view9.2.sql and create_db_activity_view.sql
-Cоздание VIEW db_activity которая отображает запущенные процессы postgres:
+Creating VIEWs for viewing running postgres processes with transactions in which the runtime is more than 100ms, and queries with runtime more than 500ms. Requires enabled track_activities in postgresql.conf for proper display the state of processes. This views allows to view only running processes, cutting idle processes. create_db_activity_view.sql is used in PostgreSQL version 9.1 and older, create_db_activity_view9.2.sql used since PostgreSQL 9.2.
 
-1) c обрабатываемыми транзакциями, время выполнения которых больше 100ms
+Fields:
 
-2) с выполянемыми запросами, время выполнения которых больше 500ms
+* ts_age - transaction runtime
 
-Требует  track_activities для корректного отображения состояния процессов.
+* state - process state (active, idle, idle in transaction, idle in transaction (aborted), fastpath function call or disabled when track_activities off)
 
-Колонки:
+* query_age - current query runtime;
 
-* ts_age - время выполнения транзакции 
+* change_age - time elapsed since the last change of process state;
 
-* state - состояние процесса (active, idle, idle in transaction, idle in transaction (aborted), fastpath function call или disabled если track_activities выключено)
+* datname - database name in which process is connected;
 
-* query_age - время выполнения запроса;
+* pid - postgres process id;
 
-* change_age - время прошедшее с момента последнего изменения состояния указанного в state;
+* usename - database username which used in postgres process for running query;
 
-* datname - имя базы с которой на текущий момент работает процесс;
+* waiting - set in true if current process waiting other query (sometimes not good);
 
-* pid - идентификатор процесса в таблице процессов;
+* client_addr - remote client ip address which connected to postgres;
 
-* usename - имя пользователя от имени которого выполнено подключение;
+* client_port - remote client port number which is used in connection;
 
-* waiting - установлено в true если на данный момент процесс ожидает снятия блокировки (плохо);
-
-* client_addr - ip адрес удаленного клиента который в данный момент подключен к процессу;
-
-* client_port - порт удаленного клиента который в данный момент подключен к процессу;
-
-* query - текст запроса который выполняется в данный момент времени;
-
-Применение: Позволяет просматривать текущее состояние выполнения транзакций/запросов отсекая при этом простаивающие процессы и особенно когда все взорвалось и надо быстро смотреть.
+* query - query text which is currently executed in process;
 
 ### create_query_stat_cpu_time_view.sql
 
