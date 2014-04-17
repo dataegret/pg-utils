@@ -117,35 +117,33 @@ Udage: ???
 
 ### generate_drop_items.sql
 
-### index_candidates_from_ssd.sql и index_candidates_to_ssd.sql
+### index_candidates_from_ssd.sql and index_candidates_to_ssd.sql
+Display indexes which should be moved from/to SSD.
 
-Отображает индексы которые следует вынести с SSD или наоборот перенести на SSD
+Columns:
 
-Колонки:
+* table - table which index belongs;
 
-* table - таблица
+* index - index name;
 
-* index - индекс
+* tblsp - tablespace where index is stored;
 
-* tblsp - tablespace
+* size - pretty table size
 
-* size - размер таблицы (pretty)
+* disk - amount of disk block reads from index;
 
-* disk - объем прочитанных данных с диска по указанному индексу, в блоках
+* disk_rat - amount of disk reads, in %;
 
-* disk_rat - объем диского чтения, в %
+* d_w_rat - the ratio of the number of block read from the disk to the total change in rows in a table (insert + update + delete - hot_update);
 
-* d_w_rat - отношение числа блоков прочитанных с диска к суммарному изменению строк в таблице (insert+update+delete-hot_update)
+* write - total writes (in tuples) in the table (insert + update + delete - hot_update);
 
-* write - суммарное число записи (в tuples) по таблице (insert+update+delete-hot_update)
+* idx_scan - number of index scan;
 
-* idx_scan - количество чтений индекса
+* idx_tup_read - number of rows read through the index;
 
-* idx_tup_read - количество строк взятых из индекса
-
-Маленькое значение d_w_rat говорит о маленьком чтении с диска при относительно больших изменениях в таблице (которые в свою очередь влияют на перестроение индекса). Для отображения индексов которые рекомендуется вынести c SSD, в sql есть условие: отображать индексы с d_w_rat < 25 и tblsp = "ssd"
-Большое значение d_w_rat говорит о большом чтении с диска (плохо) при относительно небольших изменениях в таблице.
-Для отображения индексов которые рекомендуется разместить на SSD, в sql есть условие: отображать индексы с d_w_rat > 10, disk > 1000 и tblsp != "ssd"
+Low d_w_rat value shows low disk reads with relatively high amount of changes inside relation (this behaviour influnces to the index permanent rebuilding, more changes in table, more changes in index). For displaing indexes which recommended move from SSD, a following conditions are used: display indexes with d_w_rat < 25 and tblsp = "ssd".
+High d_w_rat value shows high disk reads (bad) with relatively low amount of changes in the table. For displaing indexes which are recommended move on SSD, used following conditions: d_w_rat > 10, disk > 1000 and tblsp != "ssd".
 
 ### index_disk_activity.sql
 
