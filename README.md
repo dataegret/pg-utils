@@ -258,23 +258,23 @@ Show tables with high amount of sequential scans.
 
 Columns:
 
-* schemaname.relname - искомая таблица
+* schemaname.relname - table name;
 
-* n_live_tup - приблизительное количество "живых" строк
+* n_live_tup - number of live rows in the table;
 
-* seq_scan - количество последовательных проходов
+* seq_scan - number of sequential scan on that table;
 
-* seq_tup_read - количество строк которые были возвращены через последовательное чтение
+* seq_tup_read - number of rows which returned by sequential sqans;
 
-* write_activity - объем записи в таблицу (INSERT/UPDATE/DELETE)
+* write_activity - total amount of writes in the table (INSERT/UPDATE/DELETE);
 
-* index_count - количество индексов на таблице
+* index_count - number of indexes which are belongs to the table;
 
-* idx_scan - количество проходов по индексам таблицы
+* idx_scan - number of index scans for all table indexes;
 
-* idx_tup_fetch - количество строк которые были возвращены через индексный проход.
+* idx_tup_fetch - number of rows which was fetched by index scans.
 
-Условия: seq_scan > 0 и seq_tup_read > 100000
+Only following tables are shown: with seq_scan > 0 and seq_tup_read > 100000
 
 ### set_default_grants.sql
 
