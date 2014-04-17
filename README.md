@@ -146,124 +146,117 @@ Low d_w_rat value shows low disk reads with relatively high amount of changes in
 High d_w_rat value shows high disk reads (bad) with relatively low amount of changes in the table. For displaing indexes which are recommended move on SSD, used following conditions: d_w_rat > 10, disk > 1000 and tblsp != "ssd".
 
 ### index_disk_activity.sql
+Display indexes disk reads statistics.
 
-Отображает дисковое чтение по индексам
+Columns:
 
-Колонки:
+* table - tablename which index is belongs;
 
-* table - таблица (+схема) которой принадлежит индекс
+* index - index name;
 
-* index - имя индекса
+* tblsp - tablespace where index is stored;
 
-* tblsp - tablespace
+* size - pretty index size;
 
-* size - размер индекса (pretty)
+* disk - total amount of disk blocks reads with index;
 
-* disk - объем прочитанных данных с диска по указанному индексу, в блоках
+* disk_rat - amount of disk reads in %;
 
-* disk_rat - объем дискового чтения, в %
+* d_w_rat - the ratio of the number of block read from the disk to the total change in rows in a tableо (insert + update + delete - hot_update);
 
-* d_w_rat - отношение числа блоков прочитанных с диска к суммарному изменению строк в таблице (insert+update+delete-hot_update)
+* write - total writes (in tuples) in the table (insert + update + delete - hot_update);
 
-* write - суммарное число записи (в tuples) по таблице (insert+update+delete-hot_update)
+* idx_scan - number of index scan;
 
-* idx_scan - количество чтений индекса
+* buffer_data.dirty - pretty size of dirty data;
 
-* buffer_data.dirty - объем "грязных" данных (pretty)
+* buffer_data.%_dirty - ammount of dirty data, in %.
 
-* buffer_data.%_dirty - объем "грязных" данных, в %
-
-Условие выборки disk > 100
+Displaing only those indexes which total amount of disk blocks reads (disk column) more than 100 blocks.
 
 ### indexes_with_null.sql
+Show indexes with NULL data.
 
-Отображает список индексов в которых большое количество NULL
+Columns:
 
-Колонки:
+* table - table name which index belongs;
 
-* table - имя таблицы
+* index - index name;
 
-* index - имя индекса
+* field - column name;
 
-* field - колонка
+* statnullfrac - ratio of NULL in column;
 
-* statnullfrac - доля NULL в колонке
+* indexsize - index size;
 
-* indexsize - размер индекса
+* indexdef - index definition.
 
-* indexdef - описание индекса
-
-условия выборки: statnullfrac > 0.5 и pg_relation_size > 81920 bytes.
+Shows only indexes with statnullfrac > 0.5 and_size > 81920 bytes.
 
 ### low_used_indexes.sql
+Show indexes which low or not used.
 
-Показывает редкоиспользуемые индексы - это те в которых мало индекс-сканов и много записи в таблицы к которым они принадлежат
+Columns:
 
-Колонки:
+* schemaname.relname - schema and table which index belongs;
 
-* schemaname.relname - схема и таблица которой принадлежит индекс
+* indexrelname - index name;
 
-* indexrelname - имя индекса
+* idx_scan - number of index scans;
 
-* idx_scan - количество чтений индекса
+* write_activity - total amount of writes into table which index belongs (INSERT/UPDATE/DELETE);
 
-* write_activity - суммарная запись в таблицу которой принадлежит индекс (INSERT/UPDATE/DELETE)
+* seq_scan - number of sequential scans for this table;
 
-* seq_scan - число последовательных чтений таблицы
+* n_live_tup - number of live rows in the table;
 
-* n_live_tup - число живых строк
+* size - index size.
 
-* size - размер индекса
-
-условия: (idx_scan / write_activity) < 0.01 и write_activity > 10000
+Show indexes with following conditions: (idx_scan / write_activity) < 0.01 и write_activity > 10000.
 
 ### master_wal_position.sql
 
 ### query_stat_counts.sql
+Display query useful statistics: queries, number of calls, runtime, averages.
 
-Показывает статистику по запросам: запросы, количество вызовов, процент выполнения по времени на общем фоне, средние величины.
+Columns:
 
-Колонки:
+* time_percent - this query runtime relatively all queries runtime, in %;
 
-* time_percent - время выполнения запросов от общего времени выполнения всех запросов, в %
+* total_time - total amount of time which this query runs;
 
-* total_time - общее время выполнения запроса
+* avg_time - average query runtime in seconds;
 
-* avg_time - среднее время выполнения запроса, в секундах
+* calls - number of query calls;
 
-* calls - количество вызовов запроса
+* calls_percent - this query number of calls relatively to all queries, in %;
 
-* calls_percent - количество вызовов запроса на фоне общего количества всех запросов, в %
+* rows - number of rows returned by this query;
 
-* rows - количество строк возвращенных запросом
+* row_percent - number of rows returned by this query relatively to all rows returned by all other queries, in %;
 
-* row_percent - количество строк на фоне общего стро возвращенных всеми запросов, в %
+* query - query text.
 
-* query - текст запроса
-
-условие: (calls / sum(calls)) >= 0.01, все что меньше, отображается в особой строке c query = 'other'.
+All queries with following condition: (calls / sum(calls)) >= 0.01, are displaing in dedicated query whic named 'other'.
 
 ### query_stat_cpu_time.sql, query_stat_io_time.sql, query_stat_rows.sql, query_stat_time.sql 
-
-Запросы аналогичные тем что создаются во VIEW query_stat_cpu_time, query_stat_io_time, query_stat_time и показывают время выполнения запросов с учетом как процессорного и блочного IO(query_stat_time.sql), так и в отдельном виде (query_stat_io_time.sql и query_stat_cpu_time.sql). Требует наличия  pg_stat_statements и опционально включенного  track_io_timings.
+Queries similar to query_stat_cpu_time, query_stat_io_time, query_stat_time VIEWS and displaing queries runtime with cpu and block IO accounting. Require pg_stat_statement and track_io_timings enabled in postgresql.conf.
 
 ### redundant_indexes.sql
+Show redundant indexes - indexes which are built with common column which is present in both indexes.
 
-Показывает наличие избыточных индексов, избыточный индекс определяется как индекс поля, который может являться частью другого индекса.
+Columns:
 
-Колонки:
+* main_index - index defintion which is estmated as main;
 
-* main_index - основной индекс (SQL)
+* redundant_index - index definition which is estimated as redundant;
 
-* redundant_index - избыточный индекс (SQL)
-
-* redundant_index_size - размер избыточного индекса (pretty)
+* redundant_index_size - pretty size of redundant index.
 
 ### seq_scan_tables.sql
+Show tables with high amount of sequential scans.
 
-Отображает таблицы которые читаются последовательно (в т.ч. и при наличии индексов).
-
-Колонки:
+Columns:
 
 * schemaname.relname - искомая таблица
 
