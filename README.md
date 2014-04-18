@@ -277,123 +277,115 @@ Columns:
 Only following tables are shown: with seq_scan > 0 and seq_tup_read > 100000
 
 ### set_default_grants.sql
-
-Установка DEFAULT PRIVILEGES для новых создаваемых объектов от имени postgres для роле role_ro и role_rw:
+Setup DEFAUlT PRIVILEGES for all new object created by postgres for role_ro and role_rw roles.
 
 role_ro: select on sequences; select on tables.
 
 role_rw: select,usage on sequences; select,insert,update,delete on tables.
 
 ### set_missing_grants.sql
-
-Установка соответствующих GRANT для ролей role_ro (SELECT), role_rw (SELECT,INSERT,UPDATE,DELETE,USAGE) на таблицы, представления и последовательности в случае если ACL этих объектов пуст (NULL) или не соответствует доступу проставляемому настоящим запросом.
+Setup appropriate GRANTs for role_ro (SELECT) and role_rw (SELECT,INSERT,UPDATE,DELETE,USAGE) on tables, views and sequences in case when acl of these objecta are null or not appropriate by this snippet.
 
 ### slave_wal_position.sql
-
-Показывает текущее состояние WAL: принятое от мастера и воспроизведенное на данный момент.
+Shows current WAL state: position received from master and replayed at this moment.
 
 ### slony_tables.sql
-
-Показывает список таблиц из _slony.sl_table
+Show tables list from _slony.sl_table
 
 ### sync_tablespaces.sql
-
-Находит индексы которые размещены в других tablespace чем соответсвующие им таблицы и выполняет перенос индексов (ALTER INDEX indexname SET TABLESPACE tablespace) в тот tablespace где размещена соответствующая индексу таблица.
+Find indexes which stored in different tablespace then their tables and move on indexes (ALTER INDEX indexname SET TABLESPACE tablespace) into tablespace where  the parent table is stored.
 
 ### table_candidates_from_ssd.sql and table_candidates_to_ssd.sql
+Show tables which should be moved from SSD (high writes, low reads) or to SSD (low writes, high reads).
 
-Показывает таблицы которые следует вытащить с SSD (много записи, мало чтения) или наоборот поместить с SSD (мало записи, много чтения)
+Columns:
 
-Колонки:
+* nspname.relname - table name;
 
-* nspname.relnam - таблица
+* tblsp - tablespace where table is stored;
 
-* tblsp - tablespace
+* size - pretty table size, include TOAST;
 
-* size - размер таблицы, включая TOAST (pretty)
+* ratio - amount of writes (insert/delete/2*update) relatively to all disk reads (pg_stat_get_blocks_fetched - pg_stat_get_blocks_hit), TOAST included;
 
-* ratio - доля записи (insert/delete/2*update) на фоне дискового чтения (pg_stat_get_blocks_fetched - pg_stat_get_blocks_hit), с учетом TOAST
+* disk - amount of disk writes (pg_stat_get_blocks_fetched - pg_stat_get_blocks_hit), TOAST included;
 
-* disk - объем дискового чтения (pg_stat_get_blocks_fetched - pg_stat_get_blocks_hit), с учетом TOAST
+* disk% - amount of disk reads for this table relatively to all disk reads (with TOAST), in %;
 
-* disk% - доля дискового чтения связанного с этой таблицей на фоне суммарного чтения всех таблиц (включая TOAST)
+* rt_d_rat - ratio of rows returned from table and this table indexes relatively to disk reads for this table;
 
-* rt_d_rat - отношение извлеченных строк из таблицы и ее индексов к объему дискового чтения связанного с этой таблицей
+* r_tuples - number of rows returned from the table and her indexes;
 
-* r_tuples - количество извлеченных строк из таблицы и ее индексов
+* write - amount of writes in rows (insert/delete/2*update) include TOAST;
 
-* write - количество записи (insert/delete/2*update) включая TOAST, в строках
+* write% - ratio of disk writes related to this table relatively to total amount of writes on all tables (with TOAST);
 
-* write% - доля дискового записи связанной с этой таблицей на фоне суммарной записи во всех таблиц (включая TOAST)
+* n_tup_ins - number of inserted rows, include TOAST;
 
-* n_tup_ins - количество вставленных строк, включая TOAST
+* n_tup_upd - number of updated rows, include TOAST;
 
-* n_tup_upd - количество обновленных строк, включая TOAST
+* n_tup_del - number of deleted rows, include TOAST.
 
-* n_tup_del - количество удаленных строк, включая TOAST
+Tables which should be moved from SSD: tblsp="ssd" and ratio < 20 (high amount pf writes and low reads)
 
-условия для вынесения таблиц с SSD: tblsp="ssd" и ratio < 20 (много записи, мало чтения)
-
-условия для размещения таблиц на SSD: tblsp != "ssd" и ratio > 10 (мало записи, много чтения)
+Tables which should be moved to SSD: tblsp != "ssd" and ratio > 10 (low amount of writes, and high reads)
 
 ### table_disk_activity.sql
+Show disk activity for tables.
 
-Показывает дисковую активность по конкретным таблицам.
+Columns:
 
-Колонки:
+* nspname.relname - table name;
 
-* nspname.relname - таблица
+* tblsp - tablespace where table is stored;
 
-* tblsp - tablespace
+* size - pretty table size, include TOAST;
 
-* size - размер таблицы включая TOAST (pretty)
+* ratio - ratio of writes (insert/delete/2*update) relatively to disk reads (pg_stat_get_blocks_fetched - pg_stat_get_blocks_hit), include TOAST;
 
-* ratio - доля записи (insert/delete/2*update) на фоне дискового чтения (pg_stat_get_blocks_fetched - pg_stat_get_blocks_hit), с учетом TOAST
+* disk% - ratio of disk reads related to this table relatively to total disk reads from all tables (include TOAST);
 
-* disk% - доля дискового чтения связанного с этой таблицей на фоне суммарного чтения всех таблиц (включая TOAST)
+* rt_d_rat - ratio of returned rows from this table and indexes relatively to disk reads for this table;
 
-* rt_d_rat - отношение извлеченных строк из таблицы и ее индексов к объему дискового чтения связанного с этой таблицей
+* r_tuples - number of rows returned from this tables and indexes;
 
-* r_tuples - количество извлеченных строк из таблицы и ее индексов
+* write - amount ow writes in rows (insert/delete/2*update), include TOAST;
 
-* write - количество записи (insert/delete/2*update) включая TOAST, в строках
+* write% - amount of writes for this table relatively to the total amount of writes for all tables, include TOAST;
 
-* write% - доля дискового записи связанной с этой таблицей на фоне суммарной записи во всех таблиц (включая TOAST)
+* dirty - pretty size of dirty pages for this tables;
 
-* dirty - размер занимаемый грязными страниц (pretty)
+* %_dirty - amount of dirty pages relatively to the total amount og pages.
 
-* %_dirty - процент грязных страниц от общего числа страниц
+Only that tables are displayed: with pg_stat_get_tuples_fetched > 100 and write > 10
 
-условия: pg_stat_get_tuples_fetched > 100 или write > 10
+### table_index_write_activity.sql and table_write_activity.sql
+Shows amount of index writes (table_index_write_activity.sql) and table writes (table_write_activity.sql).
 
-### table_index_write_activity.sql и table_write_activity.sql
+Columns:
 
-Отображает объем записи в индексы таблиц (table_index_write_activity.sql) и объем записи в таблицы (table_write_activity.sql).
+* schemaname.relname - table name;
 
-Колонки:
+* size - pretty table size, without indexes;
 
-* schemaname.relname - таблица
+* tblsp - tablespace where table is stored;
 
-* size - размер таблицы, без учета индексов (pretty)
+* seq_scan - number of sequential scans for this table;
 
-* tblsp - tablespace
+* idx_scan - number of index scans for this table;
 
-* seq_scan - количество последовательных проходов по таблице
+* n_tup_ins - number of inserted rows;
 
-* idx_scan - количество чтений индексов таблицы
+* n_tup_upd - number of updated rows;
 
-* n_tup_ins - количество вставленных строк
+* n_tup_del - number of deleted rows;
 
-* n_tup_upd - количество обновленных строк
+* total - total amount for writes (INSERT/UPDATE/DELETE) for table_index_write_activity.sql and amount INSERT/2*UPDATE/DELETE for table_write_activity.sql;
 
-* n_tup_del - количество удаленных строк
+* hot_rate - amount of HOT among all update operations;
 
-* total - общая сумма по INSERT/UPDATE/DELETE для table_index_write_activity.sql и сумма по INSERT/2*UPDATE/DELETE для table_write_activity.sql
+* fillfactor - fillfactor value for table.
 
-* hot_rate - доля HOT среди всех обновлений
+Conditions for table_index_write_activity.sql: total > 100
 
-* fillfactor - значение fillfactor для таблицы
-
-условия для table_index_write_activity.sql total > 100
-
-условия для table_write_activity.sql total > 0
+Conditions for table_write_activity.sql: total > 0
