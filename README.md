@@ -49,7 +49,8 @@ Does the same for 9.2 and higher
 
 
 ### create_query_stat_cpu_time_view.sql
-Creating query_stat_cpu_time VIEW for viewing queries with runtime more or equal 0.02 seconds (IO time not accounting). Require enabled pg_stat_statements and optionally track_io_timings enabled in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
+
+Creates query_stat_cpu_time VIEW to display queries running >= 0.02 seconds (IO time is not taking into account). Require pg_stat_statements extension enabled and optionally track_io_timings enabled in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
 
 ### create_query_stat_io_time_view.sql
 Creating query_stat_io_time VIEW for viewing queries with IO time more or equal 0.02 seconds. Also require pg_stat_statements and track_io_timings in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
