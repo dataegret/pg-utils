@@ -1,4 +1,4 @@
-## Usefull DBA tools by PostgreSQL-Consulting.com
+## Useful DBA tools by PostgreSQL-Consulting.com
 ### 83compat.sql
 
 ### check_are_all_subscribed.sql
@@ -12,11 +12,11 @@ List all tables which do not have UNIQUE CONSTRAINTs.
 
 ### create_db_activity_view.sql
 
-Creates more convinient VIEW around pg_stat_activity pg_catalog view. 	
-Shows all non idle queryies running more then 100ms (optionally 500ms - see a comment in view DDL).
+Creates more convenient VIEW around pg_stat_activity pg_catalog view. 	
+Shows all non idle queries running more then 100ms (optionally 500ms - see a comment in view DDL).
 Requires track_activities=enabled in postgresql.conf to display processes states correctly. 
 
-This view works with POstgreSQL version < 9.2, to use the view with 9.2 or higher please reffer create_db_activity_view9.2.sql
+This view works with PostgreSQL version < 9.2, to use the view with 9.2 or higher please refer create_db_activity_view9.2.sql
  
 
 Columns:
