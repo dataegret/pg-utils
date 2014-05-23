@@ -1,5 +1,4 @@
-## SQL snippets (or more beautiful description)
-
+## Usefull DBA tools by PostgreSQL-Consulting.com
 ### 83compat.sql
 
 ### check_are_all_subscribed.sql
@@ -9,34 +8,45 @@
 ### check_strange_fk.sql
 
 ### check_uniq_indexes.sql
-Searhes the tables which do not have UNIQUE CONSTRAINTs.
+List all tables which do not have UNIQUE CONSTRAINTs.
 
-### create_db_activity_view9.2.sql and create_db_activity_view.sql
-Creating VIEWs for viewing running postgres processes with transactions in which the runtime is more than 100ms, and queries with runtime more than 500ms. Requires enabled track_activities in postgresql.conf for proper display the state of processes. This views allows to view only running processes, cutting idle processes. create_db_activity_view.sql is used in PostgreSQL version 9.1 and older, create_db_activity_view9.2.sql used since PostgreSQL 9.2.
+### create_db_activity_view.sql
+
+Creates more convinient VIEW around pg_stat_activity pg_catalog view. 	
+Shows all non idle queryies running more then 100ms (optionally 500ms - see a comment in view DDL).
+Requires track_activities=enabled in postgresql.conf to display processes states correctly. 
+
+This view works with POstgreSQL version < 9.2, to use the view with 9.2 or higher please reffer create_db_activity_view9.2.sql
+ 
 
 Columns:
 
-* ts_age - transaction runtime
+* ts_age - time elapsed since transaction started 
 
-* state - process state (active, idle, idle in transaction, idle in transaction (aborted), fastpath function call or disabled when track_activities off)
+* state - process state (active, idle, idle in transaction, idle in transaction (aborted), fastpath function call or disabled when track_activities setting is switched off)
 
-* query_age - current query runtime;
+* query_age - time elapsed since current query started
 
-* change_age - time elapsed since the last change of process state;
+* change_age - time elapsed since the last change of the process state
 
-* datname - database name in which process is connected;
+* datname - database the process is connected to
 
-* pid - postgres process id;
+* pid - process id
 
-* usename - database username which used in postgres process for running query;
+* usename - user name which runs the query 
 
-* waiting - set in true if current process waiting other query (sometimes not good);
+* waiting - true is current process is waiting for another one (may not be correct)
 
-* client_addr - remote client ip address which connected to postgres;
+* client_addr - remote client ip address 
 
-* client_port - remote client port number which is used in connection;
+* client_port - remote client port number
 
-* query - query text which is currently executed in process;
+* query - current query
+
+### create_db_activity_view9.2.sql
+
+Does the same for 9.2 and higher
+
 
 ### create_query_stat_cpu_time_view.sql
 Creating query_stat_cpu_time VIEW for viewing queries with runtime more or equal 0.02 seconds (IO time not accounting). Require enabled pg_stat_statements and optionally track_io_timings enabled in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
