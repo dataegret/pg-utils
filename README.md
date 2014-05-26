@@ -50,10 +50,62 @@ Does the same for 9.2 and higher
 
 ### create_query_stat_cpu_time_view.sql
 
-Creates query_stat_cpu_time VIEW to display queries running >= 0.02 seconds (IO time is not taking into account). Require pg_stat_statements extension enabled and optionally track_io_timings enabled in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
+Creates query_stat_cpu_time VIEW to display queries running >= 0.02 seconds (IO time is not taking into account). Require pg_stat_statements extension enabled and optionally track_io_timings enabled in postgresql.conf.
+
+Columns:
+
+* time_percent - total query runtime measured in %, relative to the runtime of all queries;
+
+* iotime_percent - query time spent on block IO in %, relative to the runtime of all queries;
+
+* cputime_percent - query runtime  (without time spent on block IO) in %, relative to the runtime of all queries;
+
+* total_time - total runtime of this query;
+
+* avg_time - average runtime for this query;
+
+* avg_io_time - average time spent on IO for this query;
+
+* calls - numbers of calls for this query;
+
+* calls_percent - numbers of calls for this query in %, relative to the all queries calls;
+
+* rows - number of rows was returned by this query;
+
+* row_percent - row was returned by this query in %, relative to the all rows returned by all others queries;
+
+* query - query text
+
+Note: all queries which runtime less 0.02 seconds, accounts into dedicated 'other' query.
 
 ### create_query_stat_io_time_view.sql
-Creating query_stat_io_time VIEW for viewing queries with IO time more or equal 0.02 seconds. Also require pg_stat_statements and track_io_timings in postgresql.conf. Columns description see below in create_query_stat_time_view.sql.
+Creating query_stat_io_time VIEW for viewing queries with IO time more or equal 0.02 seconds. Also require pg_stat_statements and track_io_timings in postgresql.conf.
+
+Columns:
+
+* time_percent - total query runtime measured in %, relative to the runtime of all queries;
+
+* iotime_percent - query time spent on block IO in %, relative to the runtime of all queries;
+
+* cputime_percent - query runtime  (without time spent on block IO) in %, relative to the runtime of all queries;
+
+* total_time - total runtime of this query;
+
+* avg_time - average runtime for this query;
+
+* avg_io_time - average time spent on IO for this query;
+
+* calls - numbers of calls for this query;
+
+* calls_percent - numbers of calls for this query in %, relative to the all queries calls;
+
+* rows - number of rows was returned by this query;
+
+* row_percent - row was returned by this query in %, relative to the all rows returned by all others queries;
+
+* query - query text
+
+Note: all queries which runtime less 0.02 seconds, accounts into dedicated 'other' query.
 
 ### create_query_stat_log.sql
 
@@ -252,6 +304,32 @@ All queries with following condition: (calls / sum(calls)) >= 0.01, are displain
 
 ### query_stat_cpu_time.sql, query_stat_io_time.sql, query_stat_rows.sql, query_stat_time.sql 
 Queries similar to query_stat_cpu_time, query_stat_io_time, query_stat_time VIEWS and displaing queries runtime with cpu and block IO accounting. Require pg_stat_statement and track_io_timings enabled in postgresql.conf.
+
+Columns:
+
+* time_percent - total query runtime measured in %, relative to the runtime of all queries;
+
+* iotime_percent - query time spent on block IO in %, relative to the runtime of all queries;
+
+* cputime_percent - query runtime  (without time spent on block IO) in %, relative to the runtime of all queries;
+
+* total_time - total runtime of this query;
+
+* avg_time - average runtime for this query;
+
+* avg_io_time - average time spent on IO for this query;
+
+* calls - numbers of calls for this query;
+
+* calls_percent - numbers of calls for this query in %, relative to the all queries calls;
+
+* rows - number of rows was returned by this query;
+
+* row_percent - row was returned by this query in %, relative to the all rows returned by all others queries;
+
+* query - query text
+
+Note: all queries which runtime less 0.02 seconds, accounts into dedicated 'other' query.
 
 ### redundant_indexes.sql
 Show redundant indexes - indexes which are built with common column which is present in both indexes.
