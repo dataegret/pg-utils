@@ -1,0 +1,5 @@
+
+include <cluster_config.slonik>;
+
+update functions (id = 1);
+

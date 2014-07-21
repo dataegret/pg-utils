@@ -1,0 +1,22 @@
+
+include <cluster_config.slonik>;
+
+create set (ID=@temp, ORIGIN=@master, comment='add one table to replication');
+
+SYNC (ID=@master);
+WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT=0);
+
+#output from sql/create_slonik_set_incremental.sql here
+#
+
+
+SUBSCRIBE SET (ID=@temp, PROVIDER=@master, RECEIVER=@slave1, FORWARD=YES);
+#SUBSCRIBE SET (ID=@temp, PROVIDER=@master, RECEIVER=@slave2, FORWARD=YES);
+
+SYNC (ID=@master);
+WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT=0);
+
+MERGE SET (ID=@main, ADD ID=@temp, ORIGIN=@master );
+SYNC (ID=@master);
+WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT=0);
+

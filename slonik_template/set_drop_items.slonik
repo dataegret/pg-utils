@@ -1,0 +1,10 @@
+
+include <cluster_config.slonik>;
+
+#SET DROP TABLE (origin=@master, id=SOME_TAB_NUMBER);
+#SET DROP SEQUENCE (origin=@master, id=SOME_SEQ_NUMBER);
+
+
+SYNC (ID=@master);
+WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT = 0);
+

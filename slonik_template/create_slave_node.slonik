@@ -1,0 +1,5 @@
+
+include <cluster_config.slonik>;
+
+store node (ID=@slave1, comment = '[slave db host]', EVENT NODE=@master);
+

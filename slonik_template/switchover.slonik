@@ -1,0 +1,7 @@
+
+include <cluster_config.slonik>;
+
+#LOCK SET (ID=@main, ORIGIN=@master);
+#MOVE SET (ID=@main, OLD ORIGIN=@master, NEW ORIGIN=@slave1);
+#MOVE SET (ID=@main, OLD ORIGIN=@master, NEW ORIGIN=@slave2);
+

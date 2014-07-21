@@ -1,0 +1,6 @@
+
+include <cluster_config.slonik>;
+
+store path (server = 1, client = 2, conninfo='dbname=[somedb] user=slony host=[master_db host] port=5432');
+store path (server = 2, client = 1, conninfo='dbname=[somedb] user=slony host=[slave_db host]  port=5432');
+
