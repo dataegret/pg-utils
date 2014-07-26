@@ -3,7 +3,7 @@
 WITH qq AS (SELECT
   c.oid,
   count(b.bufferid) * 8192 AS size,
-  (pgfincore(c.oid::regclass)).pages_mem * 4096 as size_in_pagecache
+  (select sum(pages_mem) * 4096 from pgfincore(c.oid::regclass)) as size_in_pagecache
 FROM pg_buffercache b
 INNER JOIN pg_class c ON b.relfilenode = pg_relation_filenode(c.oid)
 AND b.reldatabase IN (0, (SELECT oid FROM pg_database WHERE datname = current_database()))
