@@ -20,17 +20,21 @@ my $total_time   = 1;
 my $total_queries = 1;
 my $total_unique_queries = 1;
 
+my $start_time  = '';
+my $end_time    = '';
+
 {
-my ($time, $user, $db, $pid, $duration, $query);
+my ($date, $time, $user, $db, $pid, $duration, $query);
 my ($count, $lines) = (0, 0);
 
 while (<IN>) {
 	chomp;
 	$count++;
 
-	if (/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}:\d{2}(?:\.\d+)?) \S+ (\d+) (\S*)@(\S*) from (?:\S*) \[vxid:.*? txid:\d+\] \[.*?\]\s*(.*)$/) {
+	if (/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d+)?) \S+ (\d+) (\S*)@(\S*) from (?:\S*) \[vxid:.*? txid:\d+\] \[.*?\]\s*(.*)$/) {
 		count_query($time, $user, $db, $pid, $duration, $query, $count) if ($count>1 and $lines>0);
-		($time, $pid, $user, $db, $lines, $duration, $query) = ($1, $2, $3, $4, parse_log_line($5));
+		($date, $time, $pid, $user, $db, $lines, $duration, $query) = ($1, $2, $3, $4, $5, parse_log_line($6));
+		$start_time = $date . " " . $time if (!$start_time);
 	} elsif (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \S+/) {
 		die "cannot parse line '$_'\n";
 		next;
@@ -43,6 +47,7 @@ while (<IN>) {
 	}
 	#print STDERR "\r".$count;
 }
+$end_time = $date . " " . $time if ($date);
 }
 
 sub parse_log_line {
@@ -63,12 +68,15 @@ my $pos = 0;
 my $time_left = $total_time;
 print "total time used: ".((int($total_time/36000))/100)." hours \n";
 print "total unique queries found: ".scalar(keys(%queries_stat))."\n";
+print "first query: ".$start_time."\n";
+print "last query: ".$end_time."\n";
+
 foreach (sort {$queries_stat{$b}{time} <=> $queries_stat{$a}{time}} keys %queries_stat) {
 	$pos++;
 	my $percent = 100*$queries_stat{$_}{time}/$total_time;
 	last if ($percent<1);
 	$time_left -= $queries_stat{$_}{time};
-	print "\n\n\n\n===================================================\npos:$pos\ttotal_time: ".sprintf('%.02f',($queries_stat{$_}{time}/(3600*1000)))." h (".sprintf('%.02f', $percent)."%)\tavg_time:\t".sprintf('%.02f',($queries_stat{$_}{time}/$queries_stat{$_}{count}))."ms\n$_";
+	print "\n\n\n\n===================================================\npos:$pos\ttotal_time: ".sprintf('%.02f',($queries_stat{$_}{time}/(3600*1000)))." h (".sprintf('%.02f', $percent)."%)\ttotal_count: $queries_stat{$_}{count}\tavg_time:\t".sprintf('%.02f',($queries_stat{$_}{time}/$queries_stat{$_}{count}))."ms\n$_";
 	print "\n\nSample (user=$queries_stat{$_}{user} db=$queries_stat{$_}{db}):\n$queries_stat{$_}{sample}\n";
 }
 print "\n\n other: ".int($time_left/100)." s (".sprintf('%.02f', ($time_left*100/$total_time))."%)\n";
