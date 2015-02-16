@@ -50,7 +50,7 @@ union all
 	(sum(blk_read_time+blk_write_time)::numeric/sum(calls))::numeric(20, 2) AS avg_io_time,
 	to_char(sum(calls), 'FM999G999G990') AS calls,
 	(100*sum(calls)/(select ncalls from totals))::numeric(20, 2) AS calls_percent,
-	to_char(sum(rows), 'FM999G999G990') AS rows,
+	to_char(sum(rows), 'FM999G999G999G990') AS rows,
 	(100*sum(rows)/(select total_rows from totals))::numeric(20, 2) AS row_percent,
 	'all' as database,
 	'all' as username,
