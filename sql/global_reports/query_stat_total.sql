@@ -1,5 +1,5 @@
 with totals as (
-	select sum(total_time) AS total_time, sum(blk_read_time+blk_write_time) as io_time,
+	select sum(total_time) AS total_time, coalesce(nullif(sum(blk_read_time+blk_write_time), 0), 1) as io_time,
 	sum(total_time-blk_read_time-blk_write_time) as cpu_time, sum(calls) AS ncalls,
 	sum(rows) as total_rows FROM pg_stat_statements
 	WHERE TRUE
