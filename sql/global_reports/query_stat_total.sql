@@ -1,5 +1,5 @@
 with totals as (
-	select sum(total_time) AS total_time, coalesce(nullif(sum(blk_read_time+blk_write_time), 0), 1) as io_time,
+	select sum(total_time) AS total_time, greatest(sum(blk_read_time+blk_write_time), 1) as io_time,
 	sum(total_time-blk_read_time-blk_write_time) as cpu_time, sum(calls) AS ncalls,
 	sum(rows) as total_rows FROM pg_stat_statements
 	WHERE TRUE
@@ -8,7 +8,7 @@ _pg_stat_statements as (
 	select
     (select datname from pg_database where oid = p.dbid) as database,
     (select rolname from pg_roles where oid = p.userid) as username,
-    regexp_replace(query, E'\\?(, ?\\?)+', '?') as query, sum(total_time) as total_time, sum(blk_read_time) as blk_read_time,
+    regexp_replace(regexp_replace(query, E'\\?(, ?\\?)+', '?', 'g'), E'\\$[0-9]+(, \\$[0-9]+)*', '$N', 'g') as query, sum(total_time) as total_time, sum(blk_read_time) as blk_read_time,
     sum(blk_write_time) as blk_write_time, sum(calls) as calls, sum(rows) as rows
 	from pg_stat_statements p
 	where TRUE
