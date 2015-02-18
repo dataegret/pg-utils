@@ -38,7 +38,7 @@ statements as (
 	username,
 	query
 	from _pg_stat_statements
-	where ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time-blk_write_time)/(select io_time from totals)>=0.01)
+	where ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time-blk_write_time)/(select io_time from totals)>=0.01 or calls/(select ncalls from totals)>=0.02)
 union all
 	select
 	(100*sum(total_time)::numeric/(select total_time from totals)) AS time_percent,
@@ -56,7 +56,7 @@ union all
 	'all' as username,
 	'other' as query
 	from _pg_stat_statements
-	where not ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time-blk_write_time)/(select io_time from totals)>=0.01)
+	where not ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time-blk_write_time)/(select io_time from totals)>=0.01 or calls/(select ncalls from totals)>=0.02)
 ),
 
 statements_readable as (
@@ -64,7 +64,7 @@ statements_readable as (
 	to_char(time_percent, 'FM90D0') || '%' AS time_percent,
 	to_char(io_time_percent, 'FM90D0') || '%' AS io_time_percent,
 	to_char(cpu_time_percent, 'FM90D0') || '%' AS cpu_time_percent,
-	to_char(avg_io_time*100/avg_time, 'FM90D0') || '%' AS avg_io_time_percent,
+	to_char(avg_io_time*100/(coalesce(nullif(avg_time, 0), 1)), 'FM90D0') || '%' AS avg_io_time_percent,
 	total_time, avg_time, avg_cpu_time, avg_io_time, calls, calls_percent, rows, row_percent,
 	database, username, query
 	from statements s
