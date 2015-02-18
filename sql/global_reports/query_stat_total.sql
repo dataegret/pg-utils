@@ -1,4 +1,15 @@
-with totals as (
+with pg_stat_statements_normalized as (
+    select *,
+    regexp_replace(
+    regexp_replace(
+    regexp_replace(query,
+    E'\\?(::[a-zA-Z_]+)?(, *\\?(::[a-zA-Z_]+)?)+', '?', 'g'),
+    E'\\$[0-9]+(::[a-zA-Z_]+)?(, *\\$[0-9]+(::[a-zA-Z_]+)?)*', '$N', 'g'),
+    E'--.*$', '', 'ng')
+    as query_normalized
+    from pg_stat_statements
+),
+totals as (
 	select sum(total_time) AS total_time, greatest(sum(blk_read_time+blk_write_time), 1) as io_time,
 	sum(total_time-blk_read_time-blk_write_time) as cpu_time, sum(calls) AS ncalls,
 	sum(rows) as total_rows FROM pg_stat_statements
@@ -8,11 +19,12 @@ _pg_stat_statements as (
 	select
     (select datname from pg_database where oid = p.dbid) as database,
     (select rolname from pg_roles where oid = p.userid) as username,
-    regexp_replace(regexp_replace(query, E'\\?(::[a-zA-Z_]+)?(, *\\?(::[a-zA-Z_]+)?)+', '?', 'g'), E'\\$[0-9]+(::[a-zA-Z_]+)?(, *\\$[0-9]+(::[a-zA-Z_]+)?)*', '$N', 'g') as query, sum(total_time) as total_time, sum(blk_read_time) as blk_read_time,
-    sum(blk_write_time) as blk_write_time, sum(calls) as calls, sum(rows) as rows
-	from pg_stat_statements p
+    query_normalized as query, sum(total_time) as total_time,
+    sum(blk_read_time) as blk_read_time, sum(blk_write_time) as blk_write_time,
+    sum(calls) as calls, sum(rows) as rows
+	from pg_stat_statements_normalized p
 	where TRUE
-	group by dbid, userid, query
+	group by dbid, userid, query_normalized
 ),
 totals_readable as (
 	select to_char(interval '1 millisecond' * total_time, 'HH24:MI:SS') as total_time,
