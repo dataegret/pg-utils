@@ -2,10 +2,12 @@ with pg_stat_statements_normalized as (
     select *,
     regexp_replace(
     regexp_replace(
+    regexp_replace(
     regexp_replace(query,
-    E'\\?(::[a-zA-Z_]+)?(, *\\?(::[a-zA-Z_]+)?)+', '?', 'g'),
-    E'\\$[0-9]+(::[a-zA-Z_]+)?(, *\\$[0-9]+(::[a-zA-Z_]+)?)*', '$N', 'g'),
-    E'--.*$', '', 'ng')
+    E'\\?(::[a-zA-Z_]+)?( *, *\\?(::[a-zA-Z_]+)?)+', '?', 'g'),
+    E'\\$[0-9]+(::[a-zA-Z_]+)?( *, *\\$[0-9]+(::[a-zA-Z_]+)?)*', '$N', 'g'),
+    E'--.*$', '', 'ng'),
+    E'/\\*.*?\\*/', '', 'g')
     as query_normalized
     from pg_stat_statements
 ),
