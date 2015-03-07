@@ -25,8 +25,8 @@ _pg_stat_statements as (
     --select shortest query, replace \n\n-- strings to avoid email clients format text as footer
     replace(
     (array_agg(query order by length(query)))[1],
-    E'\n\n--',
-    E'\n--') as query,
+    E'-- \n',
+    E'--\n') as query,
     sum(total_time) as total_time,
     sum(blk_read_time) as blk_read_time, sum(blk_write_time) as blk_write_time,
     sum(calls) as calls, sum(rows) as rows
@@ -91,7 +91,7 @@ statements_readable as (
 
 select E'total time:\t' || total_time || ' (IO: ' || io_time_percent || E'%)\n' ||
 E'total queries:\t' || total_queries || ' (unique: ' || unique_queries || E')\n' ||
-'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9.1\n\n'
+'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9.2\n\n'
 from totals_readable
 union all
 (select E'=============================================================================================================\n' ||
