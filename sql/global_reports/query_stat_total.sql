@@ -22,8 +22,11 @@ _pg_stat_statements as (
     select
     (select datname from pg_database where oid = p.dbid) as database,
     (select rolname from pg_roles where oid = p.userid) as username,
-    --select shortest query
-    (array_agg(query order by length(query)))[1] as query,
+    --select shortest query, replace \n\n-- strings to avoid email clients format text as footer
+    replace(
+    (array_agg(query order by length(query)))[1],
+    E'\n\n--',
+    E'\n--') as query,
     sum(total_time) as total_time,
     sum(blk_read_time) as blk_read_time, sum(blk_write_time) as blk_write_time,
     sum(calls) as calls, sum(rows) as rows
@@ -77,10 +80,10 @@ union all
 ),
 statements_readable as (
     select row_number() over (order by s.time_percent desc) as pos,
-    to_char(time_percent, 'FM90D0') || '%' AS time_percent,
-    to_char(io_time_percent, 'FM90D0') || '%' AS io_time_percent,
-    to_char(cpu_time_percent, 'FM90D0') || '%' AS cpu_time_percent,
-    to_char(avg_io_time*100/(coalesce(nullif(avg_time, 0), 1)), 'FM90D0') || '%' AS avg_io_time_percent,
+    to_char(time_percent, 'FM990.0') || '%' AS time_percent,
+    to_char(io_time_percent, 'FM990.0') || '%' AS io_time_percent,
+    to_char(cpu_time_percent, 'FM990.0') || '%' AS cpu_time_percent,
+    to_char(avg_io_time*100/(coalesce(nullif(avg_time, 0), 1)), 'FM990.0') || '%' AS avg_io_time_percent,
     total_time, avg_time, avg_cpu_time, avg_io_time, calls, calls_percent, rows, row_percent,
     database, username, query
     from statements s
@@ -88,7 +91,7 @@ statements_readable as (
 
 select E'total time:\t' || total_time || ' (IO: ' || io_time_percent || E'%)\n' ||
 E'total queries:\t' || total_queries || ' (unique: ' || unique_queries || E')\n' ||
-'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9\t' || E'\n\n'
+'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9.1\n\n'
 from totals_readable
 union all
 (select E'=============================================================================================================\n' ||
