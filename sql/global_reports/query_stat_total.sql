@@ -91,7 +91,9 @@ statements_readable as (
 
 select E'total time:\t' || total_time || ' (IO: ' || io_time_percent || E'%)\n' ||
 E'total queries:\t' || total_queries || ' (unique: ' || unique_queries || E')\n' ||
-'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9.2\n\n'
+'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9.3' ||
+' @ PostgreSQL ' || (select setting from pg_settings where name='server_version') || E'\ntracking ' || (select setting from pg_settings where name='pg_stat_statements.track') || ' ' ||
+(select setting from pg_settings where name='pg_stat_statements.max') || ' queries, logging ' || (select (case when setting = '0' then 'all' when setting = '-1' then 'none' when setting::int > 1000 then (setting::numeric/1000)::numeric(20, 1) || 's+' else setting || 'ms+' end) from pg_settings where name='log_min_duration_statement') || E' queries\n\n'
 from totals_readable
 union all
 (select E'=============================================================================================================\n' ||
