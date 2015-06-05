@@ -1,5 +1,6 @@
 pgbconsole (current development) unstable; urgency=low
 
+  * open full logfile with pager.
   * fix segfault when close logfile screen and switch to another console where
     logfile screen still opened.
 

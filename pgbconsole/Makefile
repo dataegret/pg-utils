@@ -1,11 +1,13 @@
 PROGRAM_NAME = pgbconsole
 SOURCE = pgbconsole.c
-CC = gcc
-CFLAGS = -O2 -g -Wall
-PREFIX = /usr
-PGLIBDIR = $(shell pg_config --libdir)
-PGINCLUDEDIR = $(shell pg_config --includedir)
+CC ?= gcc
+CFLAGS = -std=gnu99 -O2 -Wall -pedantic
+PREFIX ?= /usr
+PGCONFIG ?= pg_config
+PGLIBDIR = $(shell $(PGCONFIG) --libdir)
+PGINCLUDEDIR = $(shell $(PGCONFIG) --includedir)
 LIBS = -lncurses -lpq
+DESTDIR ?=
 
 .PHONY: all clean install
 
@@ -18,4 +20,8 @@ clean:
 	rm -f $(PROGRAM_NAME)
 
 install:
-	install -s $(PROGRAM_NAME) $(PREFIX)/bin
+        mkdir -p $(DESTDIR)$(PREFIX)/bin/
+	install -pm 755 $(PROGRAM_NAME) $(DESTDIR)$(PREFIX)/bin/
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/$(PROGRAM_NAME)

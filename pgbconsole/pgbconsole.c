@@ -121,7 +121,7 @@ void create_initial_conn(int argc, char *argv[],
         if (strcmp(argv[1], "--version") == 0
                 || strcmp(argv[1], "-V") == 0)
         {
-            printf("  %s, version %.1f (%s)\n", PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_RELEASE);
+            printf("%s %.1f.%d\n", PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_RELEASE);
             exit(EXIT_SUCCESS);
         }
     }
@@ -185,13 +185,7 @@ void create_initial_conn(int argc, char *argv[],
     if ( prompt_password == TRI_YES )
         strcpy(conn_opts[0]->password, password_prompt("Password: ", 100, false));
 
-    if ( strlen(conn_opts[0]->dbname) == 0
-            && strlen(conn_opts[0]->user) == 0 ) {
-        strcpy(conn_opts[0]->user, pw->pw_name);
-        strcpy(conn_opts[0]->dbname, DEFAULT_DBNAME);
-    }
-    else if ( strlen(conn_opts[0]->user) != 0
-            && strlen(conn_opts[0]->dbname) == 0 )
+    if ( strlen(conn_opts[0]->user) != 0 && strlen(conn_opts[0]->dbname) == 0 )
         strcpy(conn_opts[0]->dbname, conn_opts[0]->user);
 
     conn_opts[0]->conn_used = true;
@@ -213,8 +207,8 @@ void print_usage(void)
     printf("Options:\n \
   -h, --host=HOSTNAME       pgbouncer server host or socket directory (default: \"/tmp\")\n \
   -p, --port=PORT           pgbouncer server port (default: \"6432\")\n \
-  -U, --username=USERNAME   pgbouncer admin user name (default: \"current logged user\")\n \
-  -d, --dbname=DBNAME       pgbouncer admin database name (default: \"pgbouncer\")\n \
+  -U, --username=USERNAME   pgbouncer admin user name (default: \"current user\")\n \
+  -d, --dbname=DBNAME       pgbouncer admin database name (default: \"current user\")\n \
   -w, --no-password         never prompt for password\n \
   -W, --password            force password prompt (should happen automatically)\n\n");
     printf("Report bugs to %s.\n", PROGRAM_AUTHORS_CONTACTS);
@@ -1530,13 +1524,14 @@ struct colAttrs * calculate_width(struct colAttrs *columns, int row_count, int c
  * 'SHOW CONFIG' output redirected to pager (default less).
  ****************************************************************************
  */
-void show_config(PGconn * conn)
+void show_config(WINDOW * window, PGconn * conn)
 {
     int  row_count, col_count, row, col, i;
     FILE *fpout;
     PGresult * res;
     struct colAttrs *columns;
     enum context query_context = config;
+    char * pager = malloc(sizeof(char) * 128);
 
     res = do_query(conn, query_context);
     row_count = PQntuples(res);
@@ -1545,7 +1540,12 @@ void show_config(PGconn * conn)
     columns = (struct colAttrs *) malloc(sizeof(struct colAttrs) * col_count);
     columns = calculate_width(columns, row_count, col_count, res);
 
-    fpout = popen(PAGER, "w");
+    if ((pager = getenv("PAGER")) == NULL)
+        pager = DEFAULT_PAGER;
+    if ((fpout = popen(pager, "w")) == NULL) {
+        wprintw(window, "Do nothing. Failed to open pipe to %s", pager);
+        return;
+    }
     fprintf(fpout, " Pgbouncer configuration:\n");
     /* print column names */
     for (col = 0, i = 0; col < col_count; col++, i++)
@@ -1741,6 +1741,49 @@ void print_log(WINDOW * window, struct conn_opts_struct * conn_opts)
 
 /*
  ****************************************************** key press function **
+ * Open log in $PAGER or in less if $PAGER environment var is not defined.
+ *
+ * IN:
+ * @window          Window for result messages.
+ * @conn_opts       Current connection options.
+ * @conn            Current pgbouncer connection.
+ ****************************************************************************
+ */
+void show_full_log(WINDOW * window, struct conn_opts_struct * conn_opts, PGconn * conn)
+{
+    char * logfile;
+    pid_t pid;
+
+    if (check_pgb_listen_addr(conn_opts)) {
+        logfile = (char *) malloc(sizeof(char) * PATH_MAX);
+        get_conf_value(conn, PGB_CONFIG_LOGFILE, logfile);
+        if (strlen(logfile) != 0) {
+            pid = fork();
+            if (pid == 0) {
+                char * pager = (char *) malloc(sizeof(char) * 128);
+                if ((pager = getenv("PAGER")) == NULL)
+                    pager = DEFAULT_PAGER;
+                execlp(pager, pager, logfile, NULL);
+                free(pager);
+                exit(EXIT_FAILURE);
+            } else if (pid < 0) {
+                wprintw(window, "Do nothing. Can't open %s: fork failed.", logfile);
+                return;
+            } else if (waitpid(pid, NULL, 0) != pid) {
+                wprintw(window, "Unknown error: waitpid failed.");
+                return;
+            }
+            free(logfile);
+        } else {
+            wprintw(window, "Do nothing. %s option not found.", PGB_CONFIG_LOGFILE);
+            free(logfile);
+            return;
+        }
+    }
+    return;
+}
+/*
+ ****************************************************** key press function **
  * Edit the current configuration settings.
  *
  * IN:
@@ -1852,7 +1895,7 @@ void print_help_screen(void)
     keypad(w, TRUE);
 
     wclear(w);
-    wprintw(w, "Help for interactive commands - %s version %.1f (%s)\n\n",
+    wprintw(w, "Help for interactive commands - %s version %.1f.%d\n\n",
             PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_RELEASE);
     wprintw(w, "   1..8       switch between consoles.\n \
   a,c,d,p,s     show: 'a' stats, 'c' clients, 's' servers, 'd' databases, 'p' pools.\n \
@@ -1860,7 +1903,7 @@ void print_help_screen(void)
                          'S' suspend, 'Z' shutdown.\n \
   N,Ctrl+D      'N' add new connection, Ctrl+D close current connection.\n\n \
   W         write connections info into ~/.pgbrc.\n \
-  L         show log file (only for local pgbouncers).\n \
+  L,l       'L' show log file tail, 'l' open log file with pager (only for local pgbouncers).\n \
   C,E       'C' show config, 'E' edit config (edit only for local pgbouncers).\n \
   I,i       'I' set refresh interval, 'i' change color scheme.\n \
   h         show help screen.\n \
@@ -1921,7 +1964,7 @@ void init_colors(int * ws_color, int * wc_color, int * wa_color, int * wl_color)
 void draw_color_help(WINDOW * w, int * ws_color, int * wc_color, int * wa_color, int * wl_color, int target, int * target_color)
 {
         wclear(w);
-        wprintw(w, "Help for color mapping - %s, version %.1f (%s)\n\n",
+        wprintw(w, "Help for color mapping - %s, version %.1f.%d\n\n",
                 PROGRAM_NAME, PROGRAM_VERSION, PROGRAM_RELEASE);
         wattron(w, COLOR_PAIR(*ws_color));
         wprintw(w, "\tpgbconsole: 2015-05-15 19:28:48, load average: 1.09, 1.13, 1.18\n\
@@ -2107,6 +2150,9 @@ int main (int argc, char *argv[])
                 case 'L':
                     log_process(w_cmdline, &w_log, conn_opts[console_index], conns[console_index]);
                     break;
+                case 'l':
+                    show_full_log(w_cmdline, conn_opts[console_index], conns[console_index]);
+                    break;
                 case 'M':
                     do_reload(w_cmdline, conns[console_index]);
                     break;
@@ -2146,7 +2192,7 @@ int main (int argc, char *argv[])
                     query_context = stats;
                     break;
                 case 'C':
-                    show_config(conns[console_index]);
+                    show_config(w_cmdline, conns[console_index]);
                     break;
                 case 'E':
                     edit_config(w_cmdline, conn_opts[console_index], conns[console_index]);

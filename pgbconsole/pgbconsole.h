@@ -3,9 +3,12 @@
  * (C) 2015 by Alexey V. Lesovsky (lesovsky <at> gmail.com)
  */
 
+#ifndef __PGBCONSOLE_H__
+#define __PGBCONSOLE_H__
+
 #define PROGRAM_NAME        "pgbconsole"
 #define PROGRAM_VERSION     0.1
-#define PROGRAM_RELEASE     "rc"
+#define PROGRAM_RELEASE     1
 #define PROGRAM_AUTHORS_CONTACTS    "<lesovsky@gmail.com>"
 
 #define _GNU_SOURCE
@@ -18,7 +21,6 @@
 #define DEFAULT_HOST        "/tmp"
 #define DEFAULT_PORT        "6432"
 #define DEFAULT_USER        "postgres"
-#define DEFAULT_DBNAME      "pgbouncer"
 
 /* files */
 #define STAT_FILE       "/proc/stat"
@@ -27,8 +29,8 @@
 #define PGBRC_FILE      ".pgbrc"
 #define PGBRC_READ_OK   0
 #define PGBRC_READ_ERR  1
-#define PAGER           "${PAGER:-less}"
 #define DEFAULT_EDITOR  "vim"
+#define DEFAULT_PAGER   "less"
 
 /* misc */
 #define PGB_CONFIG_LOGFILE  "logfile"
@@ -203,13 +205,15 @@ int
 void
     write_pgbrc(WINDOW * window, struct conn_opts_struct * conn_opts[]);
 void
-    show_config(PGconn * conn);
+    show_config(WINDOW * window, PGconn * conn);
 void
     edit_config(WINDOW * window, struct conn_opts_struct * conn_opts, PGconn * conn);
 float
     change_refresh(WINDOW * window, float interval);
 void
     log_process(WINDOW * window, WINDOW ** w_log, struct conn_opts_struct * conn_opts, PGconn * conn);
+void
+    show_full_log(WINDOW * window, struct conn_opts_struct * conn_opts, PGconn * conn);
 void
     change_colors(int * ws_color, int * wc_color, int * wa_color, int * wl_color);
 void
@@ -228,3 +232,5 @@ void do_resume(WINDOW * window, PGconn *conn);
 void do_kill(WINDOW * window, PGconn *conn);
 void do_shutdown(WINDOW * window, PGconn *conn);
 /* END Pgbouncer action functions */
+
+#endif
