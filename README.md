@@ -275,7 +275,7 @@ Columns:
 
 * size - index size.
 
-Show indexes with following conditions: (idx_scan / write_activity) < 0.01 и write_activity > 10000.
+Show indexes with following conditions: (idx_scan / write_activity) < 0.01 and write_activity > 10000.
 
 ### master_wal_position.sql
 
