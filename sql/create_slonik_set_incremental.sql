@@ -1,10 +1,10 @@
 BEGIN;
 
 CREATE TEMP SEQUENCE table_seq;
-SELECT setval('table_seq', (SELECT max(tab_id) FROM _slony.sl_table WHERE tab_set=1)); 
+SELECT setval('table_seq', (SELECT max(tab_id) FROM _slony.sl_table)); 
 
 CREATE TEMP SEQUENCE seq_seq;
-SELECT setval('seq_seq', (SELECT max(seq_id) FROM _slony.sl_sequence WHERE seq_set=1));
+SELECT setval('seq_seq', (SELECT max(seq_id) FROM _slony.sl_sequence));
 
 SELECT 'SET ADD TABLE (SET ID=@temp, ORIGIN=@master, ID='||nextval('table_seq')||', fully qualified name = '''||fullname||''''||(case when have_pk then ');' else ', key='''||uniq_index||''');' end)
 	FROM (
