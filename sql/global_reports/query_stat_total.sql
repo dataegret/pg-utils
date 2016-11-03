@@ -23,22 +23,24 @@ _pg_stat_statements as (
     (select datname from pg_database where oid = p.dbid) as database,
     (select rolname from pg_roles where oid = p.userid) as username,
     --select shortest query, replace \n\n-- strings to avoid email clients format text as footer
+    substring(
     replace(
     (array_agg(query order by length(query)))[1],
     E'-- \n',
-    E'--\n') as query,
+    E'--\n'),
+    1, 8192) as query,
     sum(total_time) as total_time,
     sum(blk_read_time) as blk_read_time, sum(blk_write_time) as blk_write_time,
     sum(calls) as calls, sum(rows) as rows
     from pg_stat_statements_normalized p
     where TRUE
-    group by dbid, userid, query_normalized
+    group by dbid, userid, md5(query_normalized)
 ),
 totals_readable as (
     select to_char(interval '1 millisecond' * total_time, 'HH24:MI:SS') as total_time,
     (100*io_time/total_time)::numeric(20,2) AS io_time_percent,
     to_char(ncalls, 'FM999,999,999,990') AS total_queries,
-    (select to_char(count(distinct query), 'FM999,999,990') from _pg_stat_statements) as unique_queries
+    (select to_char(count(distinct md5(query)), 'FM999,999,990') from _pg_stat_statements) as unique_queries
     from totals
 ),
 statements as (
@@ -58,7 +60,7 @@ statements as (
     username,
     query
     from _pg_stat_statements
-    where ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time-blk_write_time)/(select io_time from totals)>=0.01 or calls/(select ncalls from totals)>=0.02)
+    where ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time+blk_write_time)/(select io_time from totals)>=0.01 or calls/(select ncalls from totals)>=0.02 or rows/(select total_rows from totals)>=0.02)
 union all
     select
     (100*sum(total_time)::numeric/(select total_time from totals)) AS time_percent,
@@ -76,7 +78,7 @@ union all
     'all' as username,
     'other' as query
     from _pg_stat_statements
-    where not ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time-blk_write_time)/(select io_time from totals)>=0.01 or calls/(select ncalls from totals)>=0.02)
+    where not ((total_time-blk_read_time-blk_write_time)/(select cpu_time from totals)>=0.01 or (blk_read_time+blk_write_time)/(select io_time from totals)>=0.01 or calls/(select ncalls from totals)>=0.02 or rows/(select total_rows from totals)>=0.02)
 ),
 statements_readable as (
     select row_number() over (order by s.time_percent desc) as pos,
@@ -91,14 +93,15 @@ statements_readable as (
 
 select E'total time:\t' || total_time || ' (IO: ' || io_time_percent || E'%)\n' ||
 E'total queries:\t' || total_queries || ' (unique: ' || unique_queries || E')\n' ||
-'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9.3' ||
+'report for ' || (select case when current_database() = 'postgres' then 'all databases' else current_database() || ' database' end) || E', version 0.9.4' ||
 ' @ PostgreSQL ' || (select setting from pg_settings where name='server_version') || E'\ntracking ' || (select setting from pg_settings where name='pg_stat_statements.track') || ' ' ||
-(select setting from pg_settings where name='pg_stat_statements.max') || ' queries, logging ' || (select (case when setting = '0' then 'all' when setting = '-1' then 'none' when setting::int > 1000 then (setting::numeric/1000)::numeric(20, 1) || 's+' else setting || 'ms+' end) from pg_settings where name='log_min_duration_statement') || E' queries\n\n'
+(select setting from pg_settings where name='pg_stat_statements.max') || ' queries, utilities ' || (select setting from pg_settings where name='pg_stat_statements.track_utility') ||
+', logging ' || (select (case when setting = '0' then 'all' when setting = '-1' then 'none' when setting::int > 1000 then (setting::numeric/1000)::numeric(20, 1) || 's+' else setting || 'ms+' end) from pg_settings where name='log_min_duration_statement') || E' queries\n\n'
 from totals_readable
 union all
 (select E'=============================================================================================================\n' ||
 'pos:' || pos || E'\t total time: ' || total_time || ' (' || time_percent || ', CPU: ' || cpu_time_percent || ', IO: ' || io_time_percent || E')\t calls: ' || calls ||
 ' (' || calls_percent || E'%)\t avg_time: ' || avg_time || 'ms (IO: ' || avg_io_time_percent || E')\n' ||
-'user: ' || username || E'\t db: ' || database || E'\t rows: ' || rows || E'\t query:\n' || query || E'\n'
+'user: ' || username || E'\t db: ' || database || E'\t rows: ' || rows || ' (' || row_percent || '%)' || E'\t query:\n' || query || E'\n'
 
 from statements_readable order by pos);
