@@ -14,7 +14,7 @@ group by query
 
 SELECT
 (100*total_time/(SELECT t FROM s))::numeric(20,2) AS time_percent,
-(100*(blk_read_time+blk_write_time)/(SELECT iot FROM s))::numeric(20,2) AS iotime_percent,
+(100*(blk_read_time+blk_write_time)/NULLIF((SELECT iot FROM s), 0))::numeric(20,2) AS iotime_percent,
 (100*(total_time-blk_read_time-blk_write_time)/(SELECT cput FROM s))::numeric(20,2) AS cputime_percent,
 total_time::numeric(20,2) as total_time,
 (total_time*1000/calls)::numeric(20,2) AS avg_time,
@@ -32,7 +32,7 @@ UNION all
 
 SELECT
 (100*sum(total_time)/(SELECT t FROM s))::numeric(20,2) AS time_percent,
-(100*sum(blk_read_time+blk_write_time)/(SELECT iot FROM s))::numeric(20,2) AS iotime_percent,
+(100*sum(blk_read_time+blk_write_time)/NULLIF((SELECT iot FROM s), 0))::numeric(20,2) AS iotime_percent,
 (100*sum(total_time-blk_read_time-blk_write_time)/(SELECT cput FROM s))::numeric(20,2) AS cputime_percent,
 sum(total_time)::numeric(20,2),
 (sum(total_time)*1000/sum(calls))::numeric(10,3) AS avg_time,
