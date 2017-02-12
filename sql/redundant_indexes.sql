@@ -15,9 +15,9 @@ JOIN
 index_data as i2
 ON i1.indrelid=i2.indrelid AND i1.indexrelid<>i2.indexrelid
 WHERE
-(i1.indpred IS NOT DISTINCT FROM i2.indpred)
+(regexp_replace(i1.indpred, 'location \d+', 'location', 'g') IS NOT DISTINCT FROM regexp_replace(i2.indpred, 'location \d+', 'location', 'g'))
 AND
-(i1.indexprs IS NOT DISTINCT FROM i2.indexprs) 
+(regexp_replace(i1.indexprs, 'location \d+', 'location', 'g') IS NOT DISTINCT FROM regexp_replace(i2.indexprs, 'location \d+', 'location', 'g')) 
 AND
 ((i1.nkeys > i2.nkeys and not i2.indisunique) OR (i1.nkeys=i2.nkeys and ((i1.indisunique and i2.indisunique and (i1.indexrelid>i2.indexrelid)) or (not i1.indisunique and not i2.indisunique and (i1.indexrelid>i2.indexrelid)) or (i1.indisunique and not i2.indisunique))))
 AND
