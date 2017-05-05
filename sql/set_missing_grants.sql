@@ -54,5 +54,14 @@ AND (
         WHEN 'S' THEN c.relacl::text not like '%role_rw=rU/%'
         END
 )
-ORDER BY 1
+UNION ALL
+SELECT
+	'GRANT USAGE ON SCHEMA "'||n.nspname||'" TO role_rw;'
+FROM pg_catalog.pg_namespace n
+WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
+UNION ALL
+SELECT
+        'GRANT USAGE ON SCHEMA "'||n.nspname||'" TO role_ro;'
+FROM pg_catalog.pg_namespace n
+WHERE n.nspname !~ '^pg_' AND n.nspname <> 'information_schema'
 
