@@ -15,14 +15,16 @@ from (
     select schemaname, p.relname as table_name, indexrelname as index_name,
     (select (case when avg_leaf_density = 'NaN' then 0 
         else greatest(ceil(index_size * (1 - avg_leaf_density / (coalesce((SELECT (regexp_matches(reloptions::text, E'.*fillfactor=(\\d+).*'))[1]),'90')::real)))::bigint, 0) end)
-        from pgstatindex(schemaname || '.' || p.indexrelid::regclass::text)
+        from pgstatindex(p.indexrelid::regclass::text)
     ) as free_space,
     pg_relation_size(p.indexrelid) as index_size,
     pg_relation_size(p.relid) as table_size,
     idx_scan
     from indexes p
     join pg_class c on p.indexrelid = c.oid
+    join pg_index i on i.indexrelid = p.indexrelid
     where pg_get_indexdef(p.indexrelid) like '%USING btree%' and
+    i.indisvalid and
     --put your index name/mask here
     indexrelname ~ ''
 ) t

@@ -18,7 +18,7 @@ from (
     from pg_class c
     left join pg_namespace n on (n.oid = c.relnamespace)
     where nspname not in ('pg_catalog', 'information_schema')
-    and nspname !~ '^pg_toast' and relkind = 'r'
+    and nspname !~ '^pg_toast' and nspname !~ '^pg_temp' and relkind = 'r'
     --put your table name/mask here
     and relname ~ ''
 ) t
