@@ -10,6 +10,14 @@
 ### check_uniq_indexes.sql
 List all tables which do not have UNIQUE CONSTRAINTs.
 
+### check_config.sql
+This query is used for getting non default configuration parameters in PostgreSQL.
+For user/client sessions you can see modified parameters, but reset_val will contain value from configuration file (I hope).
+If you see (*) before config name it means that parameter has default value.
+If you see (c) after config name it means that parameter was changed for client session or by another reason (database, user, etc).
+If you see !!! after config name it means that parameter were changed in file but still not apllied.
+All fields in report are aligned by width for simplifying a compare procedures.
+
 ### create_db_activity_view.sql
 
 Creates more convenient VIEW around pg_stat_activity pg_catalog view. 	
