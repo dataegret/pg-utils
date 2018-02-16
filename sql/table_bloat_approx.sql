@@ -1,4 +1,5 @@
---pgstattuple extension required
+--faster version of table_bloat.sql which returns approximate results and doesn't read whole table (but reads toast tables)
+--pgstattuple v1.3+ extension required (available since postgresql 9.5)
 --WARNING: without table name/mask query will read all available tables which could cause I/O spikes
 select nspname,
 relname,
@@ -10,7 +11,7 @@ round(((toast_free_space + relation_size - (relation_size - free_space)*100/fill
 pg_size_pretty((toast_free_space + relation_size - (relation_size - free_space)*100/fillfactor)::bigint) total_waste
 from (
     select nspname, relname,
-    (select free_space from pgstattuple(c.oid)) as free_space,
+    (select approx_free_space from pgstattuple_approx(c.oid)) as free_space,
     pg_relation_size(c.oid) as relation_size,
     (case when reltoastrelid = 0 then 0 else (select free_space from pgstattuple(c.reltoastrelid)) end) as toast_free_space,
     coalesce(pg_relation_size(c.reltoastrelid), 0) as toast_relation_size,

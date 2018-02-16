@@ -24,7 +24,7 @@ from (
     join pg_class c on p.indexrelid = c.oid
     join pg_index i on i.indexrelid = p.indexrelid
     where pg_get_indexdef(p.indexrelid) like '%USING btree%' and
-    i.indisvalid and
+    i.indisvalid and (c.relpersistence = 'p' or not pg_is_in_recovery()) and
     --put your index name/mask here
     indexrelname ~ ''
 ) t
