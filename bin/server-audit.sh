@@ -301,14 +301,17 @@ if [[ $answer == "y" ]]; then
   else
       answer="y"          # size is less than 2Gb and it's acceptable for us.
   fi
-  answer=""
-  if [[ $pgLcMessages != 'C' && $pgLcMessages != *"en_US"* ]]; then      # print warning about the log size
-    while [[ $answer != "y" &&  $answer != "n" ]]
-      do
-        read -p "${red}PostgreSQL server's lc_messages is neither C nor en_US.UTF-8. ${yellow}Parse the log anyway? [y/n]: ${reset}" answer
-      done
-  else
-      answer="y"          # no problem with lc_messages
+
+  if [[ $answer == "y" ]]; then
+    answer=""
+    if [[ $pgLcMessages != 'C' && $pgLcMessages != *"en_US"* ]]; then      # print warning about the log size
+      while [[ $answer != "y" &&  $answer != "n" ]]
+        do
+          read -p "${red}PostgreSQL server's lc_messages is neither C nor en_US.UTF-8. ${yellow}Parse the log anyway? [y/n]: ${reset}" answer
+        done
+    else
+        answer="y"          # no problem with lc_messages
+    fi
   fi
 
   if [[ $answer == "y" ]]; then	      # we are ready to parse log
@@ -316,6 +319,7 @@ if [[ $answer == "y" ]]; then
     if [[ $pvUtil == true ]]; then      # handle log with pv
         pv --progress --timer --eta --bytes --width 100 --rate-limit $pvLimit $pgCompleteLogPath |grep -oE '(ERROR|WARNING|FATAL|PANIC).*' > $tempPgLog
     else                                # do it without pv
+	echo "answer: $answer"
         grep -oE '(ERROR|WARNING|FATAL|PANIC).*' $pgCompleteLogPath > $tempPgLog
     fi
 
