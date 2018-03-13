@@ -12,7 +12,9 @@ yellow=$(tput setaf 3)
 reset=$(tput sgr0)
 
 # defaults
-psqlCmd="psql -tXAF: -U postgres"
+psqlArgs=$@
+psqlCmd="psql -tXAF: $psqlArgs"
+echo "cmd: $psqlCmd"
 prgPager="less"
 [[ $(which vi 2>/dev/null) ]] && prgEditor=$(which vi) || prgEditor=$(which nano)
 [[ $(which pv 2>/dev/null) ]] && pvUtil=true || pvUtil=false
