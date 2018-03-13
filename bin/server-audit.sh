@@ -1,5 +1,8 @@
 #!/bin/bash
+# Author:       Lesovsky A.V. lesovsky@dataegret.com
+# License:      BSD 3-Clause License
 # Description: Do audit and make report.
+# Usage: server-audit.sh [psql arguments]
 
 # env variables
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
