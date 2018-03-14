@@ -8,8 +8,12 @@ my $REPLICA_DB=$ARGV[1] or die "call syntax $0 masterdb slavedb";
 my $CRON=$ARGV[2];
 my $CRON_LIMIT=$ARGV[3];
 
-my $replica_pos = `psql -X -t -h $REPLICA_DB -c 'SELECT pg_last_xlog_receive_location()'`;
-my $master_pos = `psql -X -t -h $MASTER_DB -c 'SELECT pg_current_xlog_location()'`;
+my $pg_version = `psql -qAtX -h $MASTER_DB -c "SELECT (setting::numeric/10000)::int FROM pg_settings WHERE name='server_version_num'"`
+    or die "ERROR: failed to check version, aborting";
+my $lsn_current = $pg_version < 10 ? "pg_current_xlog_location" : "pg_current_wal_lsn";
+my $lsn_received = $pg_version < 10 ? "pg_last_xlog_receive_location" : "pg_last_wal_receive_lsn";
+my $master_pos = `psql -X -t -h $MASTER_DB -c 'SELECT $lsn_current()'`;
+my $replica_pos = `psql -X -t -h $REPLICA_DB -c 'SELECT $lsn_received()'`;
 $master_pos =~ s/^\s*(\S+)\s*$/$1/;
 $replica_pos =~ s/^\s*(\S+)\s*$/$1/;
 
