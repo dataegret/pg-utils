@@ -249,7 +249,7 @@ echo -e "
 ${yellow}Services: summary${reset}
   PostgreSQL:        $([[ -n $pgVersion ]] && echo "$pgVersion installed" || echo "not installed.") \
 $(if [[ -n $pgVersion && -n $pgLatestAvailVer ]]; then echo "(latest available: $pgLatestAvailVer)"; fi ) \
-$(if [[ -n $pgVersion ]]; then [[ -n $(pgrep postgres) ]] && echo "and running." || echo "but not running."; fi)
+$(if [[ -n $pgVersion ]]; then [[ -n $(ps aux|grep postgres: |grep -v grep &>/dev/null && echo OK) ]] && echo "and running." || echo "but not running."; fi)
   pgBouncer:         $([[ -n $pgbVersion ]] && echo "$pgbVersion installed" || echo "not installed.") \
 $(if [[ -n $pgbVersion ]]; then [[ -n $(pgrep pgbouncer) ]] && echo "and running." || echo "but not running."; fi)
   pgPool:            $([[ -n $pgpVersion ]] && echo "$pgpVersion installed" || echo "not installed.") \
