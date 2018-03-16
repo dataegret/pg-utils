@@ -4,6 +4,9 @@
 # Description: Do audit and make report.
 # Usage: server-audit.sh [psql arguments]
 
+# send stderr to /dev/null gloabally
+exec 2>/tmp/file
+
 # env variables
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 export LANG="en_US.UTF-8"
@@ -17,11 +20,10 @@ reset=$(tput sgr0)
 # defaults
 psqlArgs=$@
 psqlCmd="psql -tXAF: $psqlArgs"
-echo "cmd: $psqlCmd"
 prgPager="less"
-[[ $(which vi 2>/dev/null) ]] && prgEditor=$(which vi) || prgEditor=$(which nano)
-[[ $(which pv 2>/dev/null) ]] && pvUtil=true || pvUtil=false
-[[ $(which curl 2>/dev/null) ]] && curlUtil=true || curlUtil=false
+[[ $(which vi) ]] && prgEditor=$(which vi) || prgEditor=$(which nano)
+[[ $(which pv) ]] && pvUtil=true || pvUtil=false
+[[ $(which curl) ]] && curlUtil=true || curlUtil=false
 pvLimit="50M"                  # default rate-limit for pv
 
 #
@@ -40,7 +42,7 @@ getHardwareData() {
   memData="physical memory: $memTotal; swap: $swapTotal"
 
   # required lspci for pci device_id and vendor_id translation
-  storageData=$(lspci 2>/dev/null |awk -F: '/storage controller/ || /RAID/ || /SCSI/ { print $3 }' |xargs echo)
+  storageData=$(lspci |awk -F: '/storage controller/ || /RAID/ || /SCSI/ { print $3 }' |xargs echo)
 
   for disk in $(grep -Ewo '(s|h|v|xv)d[a-z]|c[0-9]d[0-9]' /proc/partitions |sort -r |xargs echo); do
     size=$(echo $(($(cat /sys/dev/block/$(grep -w $disk /proc/partitions |awk '{print $1":"$2}')/size) * 512 / 1024 / 1024 / 1024)))
@@ -49,12 +51,12 @@ getHardwareData() {
   diskData=$(echo $diskData |sed -e 's/,$//')
 
   # required lspci for pci device_id and vendor_id translation
-  netData=$(lspci 2>/dev/null |awk -F: '/Ethernet controller/ {print $3}' |sort |uniq -c |sed -e 's/$/,/g' |xargs echo |tr -d ",$")
+  netData=$(lspci |awk -F: '/Ethernet controller/ {print $3}' |sort |uniq -c |sed -e 's/$/,/g' |xargs echo |tr -d ",$")
 }
 
 getOsData() {
-  hostname=$(hostname 2>/dev/null)
-  full_hostname=$(hostname -f 2>/dev/null)
+  hostname=$(hostname)
+  full_hostname=$(hostname -f)
   arch=$(uname --machine)
   os=$(find /etc -maxdepth 1 -name '*release' -type f | xargs cat |grep ^PRETTY_NAME |cut -d= -f2 |tr -d \")
   kernel=$(uname -sr)
@@ -89,26 +91,31 @@ getOsData() {
 }
 
 getPkgInfo() {
-  [[ $(which pgbouncer 2>/dev/null) ]] && binPgbouncer=$(which pgbouncer) ||  binPgbouncer=""
-  [[ $(which pgpool 2>/dev/null) ]] && binPgpool=$(which pgpool) || binPgpool=""
-  [[ $(which pgqadm 2>/dev/null) ]] && binPgqadm=$(which pgqadm) || binPgqadm=""
-  [[ $(which qadmin 2>/dev/null) ]] && binQadmin=$(which qadmin) || binQadmin=""
-  [[ $(which slon 2>/dev/null) ]] && binSlon=$(which slon) || binSlon=""
-  [[ $(which ntpd 2>/dev/null) ]] && binNtpd=$(which ntpd) || binNtpd=""
+  [[ $(which pgbouncer) ]] && binPgbouncer=$(which pgbouncer) ||  binPgbouncer=""
+  [[ $(which pgpool) ]] && binPgpool=$(which pgpool) || binPgpool=""
+  [[ $(which pgqadm) ]] && binPgqadm=$(which pgqadm) || binPgqadm=""
+  [[ $(which qadmin) ]] && binQadmin=$(which qadmin) || binQadmin=""
+  [[ $(which slon) ]] && binSlon=$(which slon) || binSlon=""
+  [[ $(which ntpd) ]] && binNtpd=$(which ntpd) || binNtpd=""
   
 
-  [[ -n $binPgbouncer ]] && pgbVersion=$($binPgbouncer --version 2>/dev/null |cut -d" " -f3) || pgbVersion=""
-  [[ -n $binPgpool ]] && pgpVersion=$($binPgpool --version 2>/dev/null |cut -d" " -f3) || pgpVersion=""
-  [[ -n $binPgqadm ]] && pgqaVersion=$($binPgqadm --version 2>/dev/null |cut -d" " -f3) || pgqaVersion=""
-  [[ -n $binQadmin ]] && qadVersion=$($binQadmin --version 2>/dev/null |cut -d" " -f3) || qadVersion=""
-  [[ -n $binSlon ]] && slonVersion=$($binSlon -v 2>/dev/null |cut -d" " -f3) || slonVersion=""
+  [[ -n $binPgbouncer ]] && pgbVersion=$($binPgbouncer --version |cut -d" " -f3) || pgbVersion=""
+  [[ -n $binPgpool ]] && pgpVersion=$($binPgpool --version |cut -d" " -f3) || pgpVersion=""
+  [[ -n $binPgqadm ]] && pgqaVersion=$($binPgqadm --version |cut -d" " -f3) || pgqaVersion=""
+  [[ -n $binQadmin ]] && qadVersion=$($binQadmin --version |cut -d" " -f3) || qadVersion=""
+  [[ -n $binSlon ]] && slonVersion=$($binSlon -v |cut -d" " -f3) || slonVersion=""
   [[ -n $binNtpd ]] && ntpdVersion=$($binNtpd --version 2>&1 |head -n 1 |grep -woE '[0-9p\.]+'|head -n 1) || ntpdVersion=""
 
   pgVersion=$($psqlCmd -c 'show server_version')
-  pgMajVersion=$(echo $pgVersion |grep -oE '^[0-9]+\.[0-9]+|^1[0-9]+')
+  pgMajVersion=$($psqlCmd -c "select current_setting('server_version_num')::int / 10000")
 }
 
 getPostgresCommonData() {
+  if [[ $($psqlCmd -c "select 1") != 1 ]]; then
+      pgcheck_success=0
+      return
+  fi
+
   pgGetDbQuery="SELECT d.datname as name,
                        pg_catalog.pg_encoding_to_char(d.encoding) as encoding,
                        d.datcollate as collate,d.datctype as ctype,
@@ -127,8 +134,8 @@ getPostgresCommonData() {
   pgDataDir=$($psqlCmd -c "show data_directory")
   pgConfigFile=$($psqlCmd -c "show config_file")
   pgHbaFile=$($psqlCmd -c "show hba_file")
-  pgAutoConfigFile=$(ls -1 $pgDataDir/postgresql.auto.conf 2>/dev/null)
-  pgAutoConfigNumLines=$(grep -c -vE '^#|^#' $pgDataDir/postgresql.auto.conf 2>/dev/null)
+  pgAutoConfigFile=$(ls -1 $pgDataDir/postgresql.auto.conf)
+  pgAutoConfigNumLines=$(grep -c -vE '^#|^#' $pgDataDir/postgresql.auto.conf)
   pgTblSpcNum=$($psqlCmd -c "select count(1) from pg_tablespace")
   pgTblSpcList=$($psqlCmd -c "$pgGetTblSpcQuery" |awk -F: '{print $1" (size: "$3", location: "$2");"}' |xargs echo |sed -e 's/;$/\./g')
   pgDbNum=$($psqlCmd -c "select count(1) from pg_database")
@@ -139,7 +146,7 @@ getPostgresCommonData() {
   pgLogFile=$(date +$($psqlCmd -c "show log_filename"))
   pgLcMessages=$($psqlCmd -c "show lc_messages")
   numaMapsLocation="/proc/$(head -n 1 $pgDataDir/postmaster.pid)/numa_maps"
-  if [[ -f $numaMapsLocation ]]; then numaCurPolicy=$(cat $numaMapsLocation 2>/dev/null|head -n 1 |cut -d" " -f2); fi
+  if [[ -f $numaMapsLocation ]]; then numaCurPolicy=$(cat $numaMapsLocation|head -n 1 |cut -d" " -f2); fi
   [[ $curlUtil == "true" ]] && pgLatestAvailVer=$(curl --connect-timeout 3 -s https://www.postgresql.org/ |grep "PostgreSQL .* Released!" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
 }
 
@@ -282,7 +289,8 @@ answer=""
 while [[ $answer != "y" &&  $answer != "n" ]]
   do
     sleep 0.1
-    read -p "${yellow}Parse postgresql log and print summary information? [y/n]: ${reset}" answer
+    echo -n "${yellow}Parse postgresql log and print summary information? [y/n]: ${reset}"
+    read answer
   done
 if [[ $answer == "y" ]]; then
   if [[ $(echo $pgLogDir |cut -c1) == "/" ]]; then      # this is an absolute path
@@ -293,7 +301,8 @@ if [[ $answer == "y" ]]; then
   while [[ ! -f $pgCompleteLogPath ]]
     do
        # Ubuntu/Debian workaround. By default logging isn't configured adequate there.
-       read -p "${red}Logfile not found on its location. ${yellow}Enter another location: ${reset}" pgCompleteLogPath
+       echo -n "${red}Logfile not found on its location. ${yellow}Enter another location: ${reset}"
+       read pgCompleteLogPath
     done
   ls -l $pgCompleteLogPath
 
@@ -301,7 +310,8 @@ if [[ $answer == "y" ]]; then
   if [[ $(stat --printf="%s" $pgCompleteLogPath) -gt 1000000000 ]]; then      # print warning about the log size
     while [[ $answer != "y" &&  $answer != "n" ]]
       do
-        read -p "${yellow}Logfile size is more than 1Gb, parse it anyway? [y/n]: ${reset}" answer
+        echo -n "${yellow}Logfile size is more than 1Gb, parse it anyway? [y/n]: ${reset}" 
+        read answer
       done
   else
       answer="y"          # size is less than 2Gb and it's acceptable for us.
@@ -312,7 +322,8 @@ if [[ $answer == "y" ]]; then
     if [[ $pgLcMessages != 'C' && $pgLcMessages != *"en_US"* ]]; then      # print warning about the log size
       while [[ $answer != "y" &&  $answer != "n" ]]
         do
-          read -p "${red}PostgreSQL server's lc_messages is neither C nor en_US.UTF-8. ${yellow}Parse the log anyway? [y/n]: ${reset}" answer
+          echo -n "${red}PostgreSQL server's lc_messages is neither C nor en_US.UTF-8. ${yellow}Parse the log anyway? [y/n]: ${reset}"
+          read answer
         done
     else
         answer="y"          # no problem with lc_messages
@@ -354,7 +365,8 @@ echo -e "${yellow}PostgreSQL: content${reset}
 answer=""
 while [[ $answer != "y" &&  $answer != "n" ]]
   do
-    read -p "${yellow}Print uncommented options from postgresql.conf? [y/n]: ${reset}" answer
+    echo -n "${yellow}Print uncommented options from postgresql.conf? [y/n]: ${reset}"
+    read answer
   done
 if [[ $answer == "y" ]]; then
     echo "${yellow}$pgConfigFile${reset}"
@@ -440,12 +452,14 @@ doDbAudit() {
   while [[ $answer != "n" ]]
     do
       sleep 0.1
-      read -p "${yellow}Do an audit of the particular database? [y/n]: ${reset}" answer
+      echo -n "${yellow}Do an audit of the particular database? [y/n]: ${reset}"
+      read answer
       dbexists=""
       while [[ $dbexists != "1" && $answer == 'y' ]]
         do
           if [[ $answer == "y" ]]; then
-           read -p "${yellow}Enter database name: ${reset}" targetDb
+            echo -n "${yellow}Enter database name: ${reset}"
+            read targetDb
           fi
           dbexists=$($psqlCmd -c "select count(1) from pg_database where datname = '$targetDb'")
           [[ $dbexists -eq 0 ]] && echo -n "${red}Database doesn't exists. ${reset}"
@@ -459,7 +473,7 @@ main() {
   echo -n "  hardware..."; getHardwareData; echo -e "\tdone"
   echo -n "  software..."; getOsData; echo -e "\tdone"
   echo -n "  packages..."; getPkgInfo; echo -e "\tdone"
-  echo -n "  postqresql..."; getPostgresCommonData; echo -e "\tdone"
+  echo -n "  postqresql..."; getPostgresCommonData; if [[ $pgcheck_success == 0 ]]; then echo -e "\tcan't connect to postgres, skip checks" ; else echo -e "\tdone"; fi
   echo "Report:"
   printSummary
   doDbAudit
