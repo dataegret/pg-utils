@@ -17,13 +17,16 @@ green=$(tput setaf 2)
 yellow=$(tput setaf 3)
 reset=$(tput sgr0)
 
+# vars
+releaseSearchPattern="The PostgreSQL Global Development Group has released an update to all supported versions of our database system"
+
 # defaults
 psqlArgs=$@
 psqlCmd="psql -tXAF: $psqlArgs"
 prgPager="less"
 [[ $(which vi) ]] && prgEditor=$(which vi) || prgEditor=$(which nano)
 [[ $(which pv) ]] && pvUtil=true || pvUtil=false
-[[ $(which curl) ]] && curlUtil=true || curlUtil=false
+[[ $(which wget) ]] && wgetUtil=true || wgetUtil=false
 pvLimit="50M"                  # default rate-limit for pv
 
 #
@@ -107,7 +110,7 @@ getPkgInfo() {
   [[ -n $binNtpd ]] && ntpdVersion=$($binNtpd --version 2>&1 |head -n 1 |grep -woE '[0-9p\.]+'|head -n 1) || ntpdVersion=""
 
   pgVersion=$($psqlCmd -c 'show server_version')
-  pgMajVersion=$($psqlCmd -c "select current_setting('server_version_num')::int / 10000")
+  pgMajVersion=$(cat $($psqlCmd -c 'show data_directory')/PG_VERSION)
 }
 
 getPostgresCommonData() {
@@ -147,7 +150,7 @@ getPostgresCommonData() {
   pgLcMessages=$($psqlCmd -c "show lc_messages")
   numaMapsLocation="/proc/$(head -n 1 $pgDataDir/postmaster.pid)/numa_maps"
   if [[ -f $numaMapsLocation ]]; then numaCurPolicy=$(cat $numaMapsLocation|head -n 1 |cut -d" " -f2); fi
-  [[ $curlUtil == "true" ]] && pgLatestAvailVer=$(curl --connect-timeout 3 -s https://www.postgresql.org/ |grep "PostgreSQL .* Released!" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
+  [[ $wgetUtil == "true" ]] && pgLatestAvailVer=$(wget -q -O - https://www.postgresql.org/ |grep "$releaseSearchPattern" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
 }
 
 printSummary() {
