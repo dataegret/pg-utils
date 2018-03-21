@@ -40,8 +40,8 @@ getHardwareData() {
 
   numaNodes=$(lscpu |grep -w "^NUMA node" |awk '{print $3}')
 
-  memTotal=$(awk -F: '/^MemTotal/ {print $2}' /proc/meminfo |xargs echo)
-  swapTotal=$(awk -F: '/^SwapTotal/ {print $2}' /proc/meminfo |xargs echo)
+  memTotal=$(awk '/^MemTotal/ {printf "%.2f GiB", $2 / 1024 / 1024}' /proc/meminfo |xargs echo)
+  swapTotal=$(awk '/^SwapTotal/ {printf "%.2f GiB", $2 / 1024 / 1024}' /proc/meminfo |xargs echo)
   memData="physical memory: $memTotal; swap: $swapTotal"
 
   # required lspci for pci device_id and vendor_id translation
@@ -49,7 +49,7 @@ getHardwareData() {
 
   for disk in $(grep -Ewo '(s|h|v|xv)d[a-z]|c[0-9]d[0-9]' /proc/partitions |sort -r |xargs echo); do
     size=$(echo $(($(cat /sys/dev/block/$(grep -w $disk /proc/partitions |awk '{print $1":"$2}')/size) * 512 / 1024 / 1024 / 1024)))
-    diskData="$disk size ${size}GiB, $diskData"
+    diskData="$disk size ${size} GiB, $diskData"
   done
   diskData=$(echo $diskData |sed -e 's/,$//')
 
@@ -61,7 +61,7 @@ getOsData() {
   hostname=$(hostname)
   full_hostname=$(hostname -f)
   arch=$(uname --machine)
-  os=$(find /etc -maxdepth 1 -name '*release' -type f | xargs cat |grep ^PRETTY_NAME |cut -d= -f2 |tr -d \")
+  os=$(find /etc -maxdepth 1 -name '*release' -type f | xargs cat |grep -E '^(PRETTY_NAME|DISTRIB_DESCRIPTION)'|head -n 1 |cut -d= -f2 |tr -d \")
   kernel=$(uname -sr)
   ip=$(ip address list |grep -oE "inet [0-9]{1,3}(\.[0-9]{1,3}){3}" |awk '{ print $2 }' |xargs echo)
   [[ $(lsblk -n -o type |grep -c lvm) > 0 ]] && isLvmUsed=true || isLvmUsed=false
@@ -81,10 +81,10 @@ getOsData() {
   sKernNumaBal=$(sysctl -n -e kernel.numa_balancing)
   sVmNrHP=$(sysctl -n -e vm.nr_hugepages)
   sVmNrOverHP=$(sysctl -n -e vm.nr_overcommit_hugepages)
-  hpSizeKb=$(grep -wE "^Hugepagesize:" /proc/meminfo |awk '{print $2}')
-  hpTotalAlloc=$(grep -wE "^HugePages_Total:" /proc/meminfo |awk '{print $2}')
-  hpTotalAllocMb=$(( $hpTotalAlloc * $hpSizeKb / 1024))
-  thpTotalAllocMb=$(grep -wE "^AnonHugePages:" /proc/meminfo |awk '{print $2 / 1024}' )
+  hpSizeMb=$(awk '/^Hugepagesize:/ {print $2 / 1024}' /proc/meminfo |xargs echo)
+  hpTotalAlloc=$(awk '/^HugePages_Total:/ {print $2 / 1024}' /proc/meminfo |xargs echo)
+  hpTotalAllocGb=$(( $hpTotalAlloc * $hpSizeMb / 1024))
+  thpTotalAllocGb=$(awk '/^AnonHugePages:/ {printf "%.2f GiB", $2 / 1024 / 1024}' /proc/meminfo  |xargs echo)
   thpState=$(cat /sys/kernel/mm/transparent_hugepage/enabled |grep -oE '\[[a-z]+\]' |tr -d \[\])
   thpDefrag=$(cat /sys/kernel/mm/transparent_hugepage/defrag |grep -oE '\[[a-z]+\]' |tr -d \[\])
   sVmLaptop=$(sysctl -n -e vm.laptop_mode)
@@ -165,7 +165,7 @@ printSummary() {
   Assigned IP(s):    $([[ -n $ip ]] && echo $ip || echo "${red}Can't understand.${reset}")
 
 ${yellow}Software: summary${reset}
-System:            Hostname $([[ -n $full_hostname ]] && echo $full_hostname || echo $hostname); Distro $os; Arch $arch; Kernel $kernel.
+  System:            Hostname $([[ -n $full_hostname ]] && echo $full_hostname || echo $hostname); Distro $os; Arch $arch; Kernel $kernel.
   Process Scheduler: kernel.sched_migration_cost_ns = $([[ $sKernSchedMigCost -le 1000000 ]] && echo "${red}$sKernSchedMigCost${reset}" || echo "${green}$sKernSchedMigCost${reset}") \
 \t\tkernel.sched_autogroup_enabled = $([[ $sKernSchedAG -eq 1 ]] && echo "${red}$sKernSchedAG${reset}" || echo "${green}$sKernSchedAG${reset}")
   Virtual Memory:    vm.dirty_background_bytes = $([[ $sVmDBgBytes -eq 0 ]] && echo "${red}$sVmDBgBytes${reset}" || echo "${green}$sVmDBgBytes${reset}") \
@@ -179,10 +179,10 @@ System:            Hostname $([[ -n $full_hostname ]] && echo $full_hostname || 
 \t\t\tvm.swappiness = $([[ $sVmSwap -gt 10 ]] && echo "${red}$sVmSwap${reset}" || echo "${green}$sVmSwap${reset}")
   NUMA:              vm.zone_reclaim_mode = $([[ $sVmZoneReclaim -eq 1 ]] && echo "${red}$sVmZoneReclaim${reset}" || echo "${green}$sVmZoneReclaim${reset}") \
 \t\t\t\tkernel.numa_balancing = $([[ $sKernNumaBal -eq 1 ]] && echo "${red}$sKernNumaBal${reset}" || echo "${green}$sKernNumaBal${reset}")
-  Huge Pages:        Huge page size: $hpSizeKb kB, Total pages: $hpTotalAlloc ($hpTotalAllocMb MB)
+  Huge Pages:        Huge page size: $hpSizeMb MiB, Total pages: $hpTotalAlloc ($hpTotalAllocGb GiB)
                      vm.nr_hugepages = ${yellow}$sVmNrHP${reset} \
 \t\t\t\tvm.nr_overcommit_hugepages = ${yellow}$sVmNrOverHP${reset}
-  Transparent Hugepages:  Huge page size: $hpSizeKb kB, used: "$thpTotalAllocMb"MB
+  Transparent Hugepages:  Huge page size: $hpSizeMb MiB, used: "$thpTotalAllocGb"
                           /sys/kernel/mm/transparent_hugepage/enabled: $([[ $thpState != "never" ]] && echo "${red}$thpState${reset}" || echo "${green}$thpState${reset}")
                           /sys/kernel/mm/transparent_hugepage/defrag: $([[ $thpDefrag != "never" ]] && echo "${red}$thpDefrag${reset}" || echo "${green}$thpDefrag${reset}")"
 
@@ -338,7 +338,6 @@ if [[ $answer == "y" ]]; then
     if [[ $pvUtil == true ]]; then      # handle log with pv
         pv --progress --timer --eta --bytes --width 100 --rate-limit $pvLimit $pgCompleteLogPath |grep -oE '(ERROR|WARNING|FATAL|PANIC).*' > $tempPgLog
     else                                # do it without pv
-	echo "answer: $answer"
         grep -oE '(ERROR|WARNING|FATAL|PANIC).*' $pgCompleteLogPath > $tempPgLog
     fi
 
