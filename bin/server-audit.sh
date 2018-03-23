@@ -82,7 +82,7 @@ getOsData() {
   sVmNrHP=$(sysctl -n -e vm.nr_hugepages)
   sVmNrOverHP=$(sysctl -n -e vm.nr_overcommit_hugepages)
   hpSizeMb=$(awk '/^Hugepagesize:/ {print $2 / 1024}' /proc/meminfo |xargs echo)
-  hpTotalAlloc=$(awk '/^HugePages_Total:/ {print $2 / 1024}' /proc/meminfo |xargs echo)
+  hpTotalAlloc=$(awk '/^HugePages_Total:/ {print $2}' /proc/meminfo |xargs echo)
   hpTotalAllocGb=$(( $hpTotalAlloc * $hpSizeMb / 1024))
   thpTotalAllocGb=$(awk '/^AnonHugePages:/ {printf "%.2f GiB", $2 / 1024 / 1024}' /proc/meminfo  |xargs echo)
   thpState=$(cat /sys/kernel/mm/transparent_hugepage/enabled |grep -oE '\[[a-z]+\]' |tr -d \[\])
