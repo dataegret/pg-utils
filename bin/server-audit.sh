@@ -160,6 +160,7 @@ getPostgresCommonData() {
   if [[ -f $numaMapsLocation ]]; then numaCurPolicy=$(cat $numaMapsLocation|head -n 1 |cut -d" " -f2); fi
   if [[ $numaNodes -eq 1 ]]; then numaCurPolicy=${green}$numaCurPolicy${reset}; fi
   pgLatestAvailVer=$($downloadUtil https://www.postgresql.org/ |grep "$releaseSearchPattern" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
+  pgHbaAuthCnt=$(grep -vE '^$|^#' $pgHbaFile |awk '{ print $NF }' |sort |uniq -c |awk '{ print $2":"$1","}' |xargs |sed -e 's/,$//g')
 }
 
 printSummary() {
@@ -289,6 +290,7 @@ echo -e "${yellow}PostgreSQL: summary${reset}
   Main configuration:        $pgConfigFile
   Auto configuration:        $(if [[ -n $pgAutoConfigFile ]]; then echo "$pgAutoConfigFile"; else echo "Not found."; fi) \
 $( if [[ -n $pgAutoConfigFile ]]; then if [[ $pgAutoConfigNumLines -gt 0 ]]; then echo "${red}exists and is not empty.${reset}"; else echo "${green}exists but nothing defined.${reset}"; fi; fi )
+  HBA configuration:         $pgHbaFile ($pgHbaAuthCnt)
   Log directory:             $(if [[ $(echo $pgLogDir |cut -c1) == "/" ]]; then echo "${green}$pgLogDir${reset}"; else echo "${red}$pgDataDir/$pgLogDir${reset}"; fi)
   Recovery?                  $pgRecoveryStatus
   Replica count:             $pgReplicaCount
