@@ -39,8 +39,9 @@ pvLimit="50M"                  # default rate-limit for pv
 getHardwareData() {
   cpuModel=$(awk -F: '/^model name/ {print $2; exit}' /proc/cpuinfo)
   cpuCount=$(awk -F: '/^physical id/ { print $2 }' /proc/cpuinfo |sort -u |wc -l)
-  cpuCoreCount=$(lscpu |grep "On-line CPU(s) list:" |xargs)
-  cpuData="$cpuCount x $cpuModel ($cpuCoreCount)"
+  cpuCoreCount=$(lscpu |grep "^CPU(s):" |xargs |cut -d" " -f2)
+  cpuCoreList=$(lscpu |grep "^On-line CPU(s) list:" |xargs)
+  cpuData="$cpuCount x $cpuModel ($cpuCoreList)"
 
   numaNodes=$(lscpu |grep -w "^NUMA node" |awk '{print $3}')
 
@@ -85,10 +86,12 @@ getOsData() {
   sKernNumaBal=$(sysctl -n -e kernel.numa_balancing)
   sVmNrHP=$(sysctl -n -e vm.nr_hugepages)
   sVmNrOverHP=$(sysctl -n -e vm.nr_overcommit_hugepages)
-  hpSizeMb=$(awk '/^Hugepagesize:/ {print $2 / 1024}' /proc/meminfo |xargs echo)
-  hpTotalAlloc=$(awk '/^HugePages_Total:/ {print $2}' /proc/meminfo |xargs echo)
+  hpSizeMbCmd=$(awk '/^Hugepagesize:/ {print $2 / 1024}' /proc/meminfo)
+  hpSizeMb=${hpSizeMbCmd:-0}
+  hpTotalAllocCmd=$(awk '/^HugePages_Total:/ {print $2}' /proc/meminfo)
+  hpTotalAlloc=${hpTotalAllocCmd:-0} 
   hpTotalAllocGb=$(( $hpTotalAlloc * $hpSizeMb / 1024))
-  thpTotalAllocGb=$(awk '/^AnonHugePages:/ {printf "%.2f GiB", $2 / 1024 / 1024}' /proc/meminfo  |xargs echo)
+  thpTotalAllocGb=$(awk '/^AnonHugePages:/ {printf "%.2f GiB", $2 / 1024 / 1024}' /proc/meminfo)
   thpState=$(cat /sys/kernel/mm/transparent_hugepage/enabled |grep -oE '\[[a-z]+\]' |tr -d \[\])
   thpDefrag=$(cat /sys/kernel/mm/transparent_hugepage/defrag |grep -oE '\[[a-z]+\]' |tr -d \[\])
   sVmLaptop=$(sysctl -n -e vm.laptop_mode)
@@ -231,19 +234,20 @@ echo -n "  Power saving mode: ${yellow}CPU scaling governor${reset} (running ker
 if [ -d /sys/devices/system/cpu/cpu0/cpufreq/ ]
   then
     echo "${red}used.${reset}"         # offset
+    echo "                     total cores: $cpuCoreCount"
     for i in $(ls -1 /sys/devices/system/cpu/ | grep -oE 'cpu[0-9]+');
       do
-        echo -n "                     "         # offset
         governor=$(cat /sys/devices/system/cpu/$i/cpufreq/scaling_governor)
         driver=$(cat /sys/devices/system/cpu/$i/cpufreq/scaling_driver)
-        echo -n "$i: $([[ $governor == "performance" ]] && echo "${green}$governor${reset}" || echo "${red}$governor${reset}")"
-        echo -n -e " (driver: $([[ $driver == "intel_pstate" ]] && echo "${green}$driver${reset}" || echo "${red}$driver${reset}"))\n"
-      done | awk '!(NR%2){print p $0}{p=$0}'
-    else
-        echo "${green}not used${reset} (cpufreq directory not found)."
-      echo -n "                     "              # offset
-      echo "check frequency with lscpu:"
-      lscpu |grep -E '^(Model|Vendor|CPU( min| max)? MHz)' |xargs -I $ echo "                     $"
+        [[ $driver == "intel_pstate" ]] && driver="${green}$driver${reset}" || driver="${red}$driver${reset}"
+        [[ $governor == "performance" ]] && governor="${green}$governor${reset}" || governor="${red}$governor${reset}"
+        echo $driver $governor
+      done |sort |uniq -c |awk '{print "                     "$2 " " $3 ": " $1 " cores"}'
+  else
+    echo "${green}not used${reset} (cpufreq directory not found)."
+    echo -n "                     "              # offset
+    echo "check frequency with lscpu:"
+    lscpu |grep -E '^(Model|Vendor|CPU( min| max)? MHz)' |xargs -I $ echo "                     $"
 fi
 echo -n "                     "         # offset
 
