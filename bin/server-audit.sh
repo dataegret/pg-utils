@@ -162,7 +162,7 @@ getPostgresCommonData() {
   numaMapsLocation="/proc/$pgPostmasterPid/numa_maps"
   if [[ -f $numaMapsLocation ]]; then numaCurPolicy=$(cat $numaMapsLocation|head -n 1 |cut -d" " -f2); fi
   if [[ $numaNodes -eq 1 ]]; then numaCurPolicy=${green}$numaCurPolicy${reset}; fi
-  pgLatestAvailVer=$($downloadUtil https://www.postgresql.org/ |grep "$releaseSearchPattern" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
+  pgLatestAvailVer=$($downloadUtil https://www.postgresql.org/ |grep -m 1 "$releaseSearchPattern" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
   pgHbaAuthCnt=$(grep -vE '^$|^#' $pgHbaFile |awk '{ print $NF }' |sort |uniq -c |awk '{ print $2":"$1","}' |xargs |sed -e 's/,$//g')
 }
 
