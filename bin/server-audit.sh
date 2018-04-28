@@ -106,15 +106,13 @@ getPkgInfo() {
   [[ $(which pgqadm) ]] && binPgqadm=$(which pgqadm) || binPgqadm=""
   [[ $(which qadmin) ]] && binQadmin=$(which qadmin) || binQadmin=""
   [[ $(which slon) ]] && binSlon=$(which slon) || binSlon=""
-  [[ $(which ntpd) ]] && binNtpd=$(which ntpd) || binNtpd=""
-  
+  [[ $(which timedatectl) ]] && binTimedatectl=$(which timedatectl) || binTimedatectl=""
 
   [[ -n $binPgbouncer ]] && pgbVersion=$($binPgbouncer --version |cut -d" " -f3) || pgbVersion=""
   [[ -n $binPgpool ]] && pgpVersion=$($binPgpool --version |cut -d" " -f3) || pgpVersion=""
   [[ -n $binPgqadm ]] && pgqaVersion=$($binPgqadm --version |cut -d" " -f3) || pgqaVersion=""
   [[ -n $binQadmin ]] && qadVersion=$($binQadmin --version |cut -d" " -f3) || qadVersion=""
   [[ -n $binSlon ]] && slonVersion=$($binSlon -v |cut -d" " -f3) || slonVersion=""
-  [[ -n $binNtpd ]] && ntpdVersion=$($binNtpd --version 2>&1 |head -n 1 |grep -woE '[0-9p\.]+'|head -n 1) || ntpdVersion=""
 
   pgVersion=$($psqlCmd -c 'show server_version')
   pgMajVersion=$(cat $($psqlCmd -c 'show data_directory')/PG_VERSION)
@@ -163,7 +161,7 @@ getPostgresCommonData() {
   if [[ -f $numaMapsLocation ]]; then numaCurPolicy=$(cat $numaMapsLocation|head -n 1 |cut -d" " -f2); fi
   if [[ $numaNodes -eq 1 ]]; then numaCurPolicy=${green}$numaCurPolicy${reset}; fi
   pgLatestAvailVer=$($downloadUtil https://www.postgresql.org/ |grep -m 1 "$releaseSearchPattern" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
-  pgHbaAuthCnt=$(grep -vE '^$|^#' $pgHbaFile |awk '{ print $NF }' |sort |uniq -c |awk '{ print $2":"$1","}' |xargs |sed -e 's/,$//g')
+  pgHbaAuthCnt=$(grep -vE '^$|^#' $pgHbaFile |awk '{if ($1 == "local") print $4; else print $5 }' |sort |uniq -c |awk '{ print $2":"$1","}' |xargs |sed -e 's/,$//g')
 }
 
 printSummary() {
@@ -284,10 +282,10 @@ $(if [[ -n $pgqaVersion ]]; then [[ -n $(pgrep pgqd) ]] && echo "and running." |
 $(if [[ -n $qadVersion ]]; then [[ -n $(pgrep pgqd) ]] && echo "and running." || echo "but not running."; fi)
   Slony:             $([[ -n $slonVersion ]] && echo "$slonVersion installed" || echo "not installed.") \
 $(if [[ -n $slonVersion ]]; then [[ -n $(pgrep slon) ]] && echo "and running." || echo "but not running."; fi)
-  Ntpd:              $([[ -n $ntpdVersion ]] && echo "$ntpdVersion installed" || echo "not installed.") \
-$(if [[ -n $ntpdVersion ]]; then [[ -n $(pgrep ntpd) ]] && echo "and running." || echo "but not running."; fi)
-  Monitoring agents: $([[ -n $(pgrep zabbix_agentd) ]] && echo "Zabbix ") $([[ -n $(pgrep monit) ]] && echo "Monit ") \
-$([[ -n $(pgrep okagent) ]] && echo "OKmeter ") $([[ -n $(pgrep munin) ]] && echo "Munin ")
+  Time sync:         $([[ -n $(pgrep ntpd) ]] && echo "Ntpd ")$([[ -n $(pgrep chronyd) ]] && echo "Chronyd ")$([[ -n $(pgrep openntpd) ]] && echo "OpenNTPd ")$([[ -n $(pidof systemd-timesyncd ) ]] && echo "Systemd-timesync ")
+  Time sync status:  $([[ -n $binTimedatectl ]] && echo $($binTimedatectl status |grep -E 'Network time on:|NTP enabled:|NTP synchronized:' |awk '{print }' ORS='; '))
+  Monitoring agents: $([[ -n $(pgrep zabbix_agentd) ]] && echo "Zabbix ")$([[ -n $(pgrep monit) ]] && echo "Monit ")\
+$([[ -n $(pgrep okagent) ]] && echo "OKmeter ")$([[ -n $(pgrep munin) ]] && echo "Munin ")
 "
 echo -e "${yellow}PostgreSQL: summary${reset}
   Data directory:            $pgDataDir
