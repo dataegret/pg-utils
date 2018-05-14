@@ -150,6 +150,7 @@ getPostgresCommonData() {
   pgDbNum=$($psqlCmd -c "select count(1) from pg_database")
   pgDbList=$($psqlCmd -c "$pgGetDbQuery" |awk -F: '{print $1" ("$5", "$2", "$3");"}' |xargs echo |sed -e 's/;$/\./g')
   pgReplicaCount=$($psqlCmd -c "select count(*) from pg_stat_replication")
+  pgReplicaList=$($psqlCmd -c "select regexp_replace(array_agg(client_addr)::text, ',', ', ', 'g') from pg_stat_replication")
   pgRecoveryStatus=$($psqlCmd -c "select pg_is_in_recovery()")
   pgLogDir=$($psqlCmd -c "show log_directory")
   pgLogFile=$(date +$($psqlCmd -c "show log_filename"))
@@ -295,7 +296,7 @@ $( if [[ -n $pgAutoConfigFile ]]; then if [[ $pgAutoConfigNumLines -gt 0 ]]; the
   HBA configuration:         $pgHbaFile ($pgHbaAuthCnt)
   Log directory:             $(if [[ $(echo $pgLogDir |cut -c1) == "/" ]]; then echo "${green}$pgLogDir${reset}"; else echo "${red}$pgDataDir/$pgLogDir${reset}"; fi)
   Recovery?                  $pgRecoveryStatus
-  Replica count:             $pgReplicaCount
+  Replica count:             $pgReplicaCount -- $pgReplicaList
   NUMA policy:               $(if [[ -n $numaCurPolicy ]]; then if [[ $numaCurPolicy = *"interleave"* ]]; then echo -n "${green}$numaCurPolicy${reset}, $numaNodes node(s);"; else echo -n "${red}$numaCurPolicy${reset}, $numaNodes node(s);"; fi; \
                                else echo -n "numa_maps not found;"; fi;
                              echo -n " (vm.zone_reclaim_mode = $([[ $sVmZoneReclaim -eq 1 ]] && echo -n "${red}$sVmZoneReclaim${reset}," || echo -n "${green}$sVmZoneReclaim${reset},")"; 
@@ -318,12 +319,9 @@ if [[ $answer == "y" ]]; then
   else                                                        # this is a relative path
       pgCompleteLogPath="$pgDataDir/$pgLogDir/$pgLogFile"
   fi
-  while [[ ! -f $pgCompleteLogPath ]]
-    do
-       # Ubuntu/Debian workaround. By default logging isn't configured adequate there.
-       echo -n "${red}Logfile not found on its location. ${yellow}Enter another location: ${reset}"
-       read pgCompleteLogPath
-    done
+fi
+
+if [[ -f $pgCompleteLogPath ]]; then
   ls -l $pgCompleteLogPath
 
   answer=""
@@ -370,6 +368,8 @@ if [[ $answer == "y" ]]; then
     [[ -f $tempPgLog ]] && rm -f $tempPgLog
     echo ""
   fi
+  else
+    echo -e -n "${red}Logfile not found on its location. ${yellow}Skip.\n${reset}"
 fi
 #######
 
