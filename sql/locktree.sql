@@ -1,14 +1,17 @@
 WITH RECURSIVE l AS (
-  SELECT pid, locktype, mode, granted, ROW(locktype,database,relation,page,tuple,virtualxid,transactionid,classid,objid,objsubid) obj FROM pg_locks
+  SELECT pid, locktype, granted,
+    array_position(ARRAY['AccessShare','RowShare','RowExclusive','ShareUpdateExclusive','Share','ShareRowExclusive','Exclusive','AccessExclusive'], left(mode,-4)) m,
+    ROW(locktype,database,relation,page,tuple,virtualxid,transactionid,classid,objid,objsubid) obj FROM pg_locks
 ), pairs AS (
-  SELECT w.pid waiter, l.pid locker, l.obj, l.mode
+  SELECT w.pid waiter, l.pid locker, l.obj, l.m
     FROM l w JOIN l ON l.obj IS NOT DISTINCT FROM w.obj AND l.locktype=w.locktype AND NOT l.pid=w.pid AND l.granted
    WHERE NOT w.granted
+     AND NOT EXISTS ( SELECT FROM l i WHERE i.pid=l.pid AND i.locktype=l.locktype AND i.obj IS NOT DISTINCT FROM l.obj AND i.m > l.m )
 ), tree AS (
-  SELECT l.locker pid, l.locker root, NULL::record obj, NULL AS mode, 0 lvl, locker::text path, array_agg(l.locker) OVER () all_pids
+  SELECT l.locker pid, l.locker root, NULL::record obj, NULL::int AS m, 0 lvl, locker::text path, array_agg(l.locker) OVER () all_pids
     FROM ( SELECT DISTINCT locker FROM pairs l WHERE NOT EXISTS (SELECT 1 FROM pairs WHERE waiter=l.locker) ) l
   UNION ALL
-  SELECT w.waiter pid, tree.root, w.obj, w.mode, tree.lvl+1, tree.path||'.'||w.waiter, all_pids || array_agg(w.waiter) OVER ()
+  SELECT w.waiter pid, tree.root, w.obj, w.m, tree.lvl+1, tree.path||'.'||w.waiter, all_pids || array_agg(w.waiter) OVER ()
     FROM tree JOIN pairs w ON tree.pid=w.locker AND NOT w.waiter = ANY ( all_pids )
 )
 SELECT (clock_timestamp() - a.xact_start)::interval(3) AS ts_age,
