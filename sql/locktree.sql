@@ -20,12 +20,13 @@ WITH RECURSIVE l AS (
   SELECT w.waiter pid, tree.root, CASE WHEN w.waiter=ANY(tree.dl) THEN tree.dl END, w.obj, w.m, tree.lvl+1, tree.path||'.'||w.waiter, all_pids || array_agg(w.waiter) OVER ()
     FROM tree JOIN pairs w ON tree.pid=w.locker AND NOT w.waiter = ANY ( all_pids )
 )
-SELECT (clock_timestamp() - a.xact_start)::interval(3) AS ts_age,
+SELECT (clock_timestamp() - a.xact_start)::interval(0) AS ts_age,
+       (clock_timestamp() - a.state_change)::interval(0) AS change_age,
+       a.datname,a.usename,a.client_addr,tree.pid,
        replace(a.state, 'idle in transaction', 'idletx') state,
-       (clock_timestamp() - state_change)::interval(3) AS change_age,
-       a.datname,tree.pid,a.usename,a.client_addr,lvl,
-       (SELECT count(*) FROM tree p WHERE p.path ~ ('^'||tree.path) AND NOT p.path=tree.path) blocked,
-       repeat(' .', lvl)||' '||left(regexp_replace(query, E'\\s+', ' ', 'g'),100) query
+       lvl,(SELECT count(*) FROM tree p WHERE p.path ~ ('^'||tree.path) AND NOT p.path=tree.path) blocked,
+       CASE WHEN tree.pid=ANY(tree.dl) THEN '!>' ELSE repeat(' .', lvl) END||' '||trim(left(regexp_replace(a.query, E'\\s+', ' ', 'g'),100)) query
   FROM tree
   JOIN pg_stat_activity a USING (pid)
- ORDER BY path;
+  JOIN pg_stat_activity r ON r.pid=tree.root
+ ORDER BY (now() - r.xact_start), path;
