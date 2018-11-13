@@ -8,16 +8,16 @@ WITH RECURSIVE l AS (
    WHERE NOT w.granted
      AND NOT EXISTS ( SELECT FROM l i WHERE i.pid=l.pid AND i.locktype=l.locktype AND i.obj IS NOT DISTINCT FROM l.obj AND i.m > l.m )
 ), leads AS (
-  SELECT o.locker, o.m, 1::int lvl, count(*) q, ARRAY[locker] track, false AS cycle FROM pairs o GROUP BY o.locker, o.m
+  SELECT o.locker, 1::int lvl, count(*) q, ARRAY[locker] track, false AS cycle FROM pairs o GROUP BY o.locker
   UNION ALL
-  SELECT i.locker, i.m, leads.lvl+1, (SELECT count(*) FROM pairs q WHERE q.locker=i.locker), leads.track||i.locker, i.locker=ANY(leads.track||i.locker)
+  SELECT i.locker, leads.lvl+1, (SELECT count(*) FROM pairs q WHERE q.locker=i.locker), leads.track||i.locker, i.locker=ANY(leads.track)
     FROM pairs i, leads WHERE i.waiter=leads.locker AND NOT cycle
 ), tree AS (
-  SELECT locker pid, locker root, CASE WHEN cycle THEN track END dl, NULL::record obj, m, 0 lvl, locker::text path, array_agg(locker) OVER () all_pids FROM leads o
+  SELECT locker pid, locker root, CASE WHEN cycle THEN track END dl, NULL::record obj, 0 lvl, locker::text path, array_agg(locker) OVER () all_pids FROM leads o
    WHERE (cycle AND NOT EXISTS (SELECT FROM leads i WHERE i.locker=ANY(o.track) AND (i.lvl>o.lvl OR i.q<o.q)))
-      OR (NOT cycle AND NOT EXISTS (SELECT FROM pairs WHERE waiter=o.locker) AND NOT EXISTS (SELECT FROM leads i WHERE i.locker=o.locker AND i.m>o.m))
+      OR (NOT cycle AND NOT EXISTS (SELECT FROM pairs WHERE waiter=o.locker) AND NOT EXISTS (SELECT FROM leads i WHERE i.locker=o.locker AND i.lvl>o.lvl))
   UNION ALL
-  SELECT w.waiter pid, tree.root, CASE WHEN w.waiter=ANY(tree.dl) THEN tree.dl END, w.obj, w.m, tree.lvl+1, tree.path||'.'||w.waiter, all_pids || array_agg(w.waiter) OVER ()
+  SELECT w.waiter pid, tree.root, CASE WHEN w.waiter=ANY(tree.dl) THEN tree.dl END, w.obj, tree.lvl+1, tree.path||'.'||w.waiter, all_pids || array_agg(w.waiter) OVER ()
     FROM tree JOIN pairs w ON tree.pid=w.locker AND NOT w.waiter = ANY ( all_pids )
 )
 SELECT (clock_timestamp() - a.xact_start)::interval(0) AS ts_age,
