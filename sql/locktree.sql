@@ -15,7 +15,7 @@ WITH RECURSIVE l AS (
 ), tree AS (
   SELECT locker pid,locker dad,locker root,CASE WHEN cycle THEN track END dl, NULL::record obj,0 lvl,locker::text path,array_agg(locker) OVER () all_pids FROM leads o
    WHERE (cycle AND NOT EXISTS (SELECT FROM leads i WHERE i.locker=ANY(o.track) AND (i.lvl>o.lvl OR i.q<o.q)))
-      OR (NOT cycle AND NOT EXISTS (SELECT FROM pairs WHERE waiter=o.locker) AND NOT EXISTS (SELECT FROM leads i WHERE i.locker=o.locker AND i.lvl>o.lvl))
+      OR (NOT cycle AND NOT EXISTS (SELECT FROM pairs WHERE waiter=o.locker) AND NOT EXISTS (SELECT FROM leads i WHERE i.locker=o.locker AND i.lvl<o.lvl))
   UNION ALL
   SELECT w.waiter pid,tree.pid,tree.root,CASE WHEN w.waiter=ANY(tree.dl) THEN tree.dl END,w.obj,tree.lvl+1,tree.path||'.'||w.waiter,all_pids || array_agg(w.waiter) OVER ()
     FROM tree JOIN pairs w ON tree.pid=w.locker AND NOT w.waiter = ANY ( all_pids )
