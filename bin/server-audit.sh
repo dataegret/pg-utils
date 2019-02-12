@@ -213,7 +213,7 @@ done
 # analyze /sys/block
 if [ -d /sys/block/ ]
   then
-    for i in $(ls -1 /sys/block/ | grep -oE '(s|xv|v)d[a-z]');
+    for i in $(ls -1 /sys/block/ | grep -oE '((s|xv|v)d[a-z])|(nvme[0-9]n[0-9])');
       do
         echo -n "                     "
         echo "$i: rotational: $(cat /sys/block/$i/queue/rotational); \
