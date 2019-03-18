@@ -163,6 +163,7 @@ getPostgresCommonData() {
   if [[ $numaNodes -eq 1 ]]; then numaCurPolicy=${green}$numaCurPolicy${reset}; fi
   pgLatestAvailVer=$($downloadUtil https://www.postgresql.org/ |grep -m 1 "$releaseSearchPattern" |grep -oE '[0-9\.]+' |grep $pgMajVersion)
   pgHbaAuthCnt=$(grep -vE '^$|^#' $pgHbaFile |awk '{if ($1 == "local") print $4; else print $5 }' |sort |uniq -c |awk '{ print $2":"$1","}' |xargs |sed -e 's/,$//g')
+  pgConfPendingRestartCnt=$($psqlCmd -c "select count(1) from pg_settings where pending_restart")
 }
 
 printSummary() {
@@ -291,7 +292,7 @@ $([[ -n $(pgrep okagent) ]] && echo "OKmeter ")$([[ -n $(pgrep munin) ]] && echo
 "
 echo -e "${yellow}PostgreSQL: summary${reset}
   Data directory:            $pgDataDir
-  Main configuration:        $pgConfigFile
+  Main configuration:        $pgConfigFile -- pending_restart: $pgConfPendingRestartCnt
   Auto configuration:        $(if [[ -n $pgAutoConfigFile ]]; then echo "$pgAutoConfigFile"; else echo "Not found."; fi) \
 $( if [[ -n $pgAutoConfigFile ]]; then if [[ $pgAutoConfigNumLines -gt 0 ]]; then echo "${red}exists and is not empty.${reset}"; else echo "${green}exists but nothing defined.${reset}"; fi; fi )
   HBA configuration:         $pgHbaFile ($pgHbaAuthCnt)
