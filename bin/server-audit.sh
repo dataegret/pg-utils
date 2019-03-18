@@ -274,7 +274,8 @@ ${yellow}Services: summary${reset}
 $(if [[ -n $pgVersion && -n $pgLatestAvailVer ]]; then echo "(latest available: $pgLatestAvailVer)"; fi ) \
 $(if [[ -n $pgVersion ]]; then [[ -n $(ps aux|grep postgres: |grep -v grep &>/dev/null && echo OK) ]] && echo "and running." || echo "but not running."; fi)
   pgBouncer:         $([[ -n $pgbVersion ]] && echo "$pgbVersion installed" || echo "not installed.") \
-$(if [[ -n $pgbVersion ]]; then [[ -n $(pgrep pgbouncer) ]] && echo "and running." || echo "but not running."; fi)
+$(if [[ -n $pgbVersion ]]; then [[ -n $(pgrep pgbouncer) ]] && echo "and running." || echo "but not running."; fi) \
+$(if pgrep pgbouncer &>/dev/null; then for i in $(pgrep pgbouncer); do echo -n "\n    * pid $i open files limit: $(awk '/Max open files/{print "soft: " $4 " hard: " $5}' /proc/$i/limits)"; done; fi)
   pgPool:            $([[ -n $pgpVersion ]] && echo "$pgpVersion installed" || echo "not installed.") \
 $(if [[ -n $pgpVersion ]]; then [[ -n $(pgrep pgpool) ]] && echo "and running." || echo "but not running."; fi)
   Skytools2:         $([[ -n $pgqaVersion ]] && echo "$pgqaVersion installed" || echo "not installed.") \
