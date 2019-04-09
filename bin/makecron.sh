@@ -12,12 +12,13 @@ EMAILSLIST=$@
 # Take first email and extract customer's name.
 IFS=' ' read -r -a EMAILS <<< $EMAILSLIST
 [[ ${EMAILS[0]} != *"+"* ]] && { echo -e "ERROR: invaild first email\nHINT: use the following email format: email+customer@domain"; exit 1; }
+MAIN_EMAIL=${EMAILS[0]}
 
 # List of connected standby nodes.
 STANDBYLIST=$(psql -qAtX -U postgres -c "select string_agg(host(client_addr), ' ') from pg_stat_replication")
 
 # Customer name.
-CUSTOMER_NAME=$(echo ${EMAILS[0]} |cut -d" " -f1 |cut -d@ -f1 |cut -d+ -f2)
+CUSTOMER_NAME=$(echo $MAIN_EMAIL |cut -d" " -f1 |cut -d@ -f1 |cut -d+ -f2)
 
 # Entitled customer name, e.g. 'customer' becomes 'Customer'.
 CUSTOMER_NAME_TITLE=$(echo $CUSTOMER_NAME |sed 's/[^ ]\+/\L\u&/g')
@@ -35,11 +36,11 @@ DELETE_HOUR=$(date --date='TZ="Europe/Moscow" 04' +"%H")
 [[ -z $LOG_DIRECTORY ]] && { echo -e "ERROR: failed to obtain log_directory setting"; exit 1; }
 
 envsubst <<EOF
-MAILTO=support-cron+$CUSTOMER_NAME@dataegret.com
+MAILTO=$MAIN_EMAIL
 # all times given in Europe/Moscow timezone
 
 # pg_stat_statements report
-59 $REPORT_HOUR * * *	/usr/bin/psql -XAt -U postgres -f ~/stuff/sql/global_reports/query_stat_total.sql | /usr/bin/mail -e -s "Daily report of pg_stat_statements for `/bin/date "+\%Y-\%m-\%d"` from `hostname` database at $CUSTOMER_NAME_TITLE" $EMAILSLIST'
+59 $REPORT_HOUR * * *	/usr/bin/psql -XAt -U postgres -f ~/stuff/sql/global_reports/query_stat_total.sql | /usr/bin/mail -e -s "Daily report of pg_stat_statements for \`/bin/date "+\%Y-\%m-\%d"\` from \`hostname\` database at $CUSTOMER_NAME_TITLE" $EMAILSLIST'
 
 # pg_stat_statements reset
 00 $RESET_HOUR * * *	/usr/bin/psql -t -c "select pg_stat_statements_reset()" > /dev/null
