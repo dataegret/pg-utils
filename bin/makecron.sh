@@ -35,7 +35,7 @@ DELETE_HOUR=$(date --date='TZ="Europe/Moscow" 04' +"%H")
 [[ -z $CUSTOMER_NAME ]] && { echo -e "ERROR: failed to obtain customer name"; exit 1; }
 [[ -z $LOG_DIRECTORY ]] && { echo -e "ERROR: failed to obtain log_directory setting"; exit 1; }
 
-envsubst <<EOF
+cat <<EOF
 MAILTO=$MAIN_EMAIL
 
 # pg_stat_statements report
