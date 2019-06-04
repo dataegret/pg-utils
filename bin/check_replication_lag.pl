@@ -12,19 +12,19 @@ my $pg_version = `psql -qAtX -h $MASTER_DB -c "SELECT (setting::numeric/10000)::
     or die "ERROR: failed to check version, aborting";
 my $lsn_current = $pg_version < 10 ? "pg_current_xlog_location" : "pg_current_wal_lsn";
 my $lsn_received = $pg_version < 10 ? "pg_last_xlog_receive_location" : "pg_last_wal_receive_lsn";
-my $master_pos = `psql -X -t -h $MASTER_DB -c 'SELECT $lsn_current()'`;
-my $replica_pos = `psql -X -t -h $REPLICA_DB -c 'SELECT $lsn_received()'`;
-$master_pos =~ s/^\s*(\S+)\s*$/$1/;
-$replica_pos =~ s/^\s*(\S+)\s*$/$1/;
+my $master_pos = `psql -qAtX -h $MASTER_DB -c 'SELECT CASE WHEN pg_is_in_recovery() THEN $lsn_received() ELSE $lsn_current() END' | tr -d '\n'`;
+my $replica_pos = `psql -qAtX -h $REPLICA_DB -c 'SELECT CASE WHEN pg_is_in_recovery() THEN $lsn_received() ELSE NULL END' | tr -d '\n'`;
 
-my $replay_delay = CalculateNumericalOffset($master_pos) - CalculateNumericalOffset($replica_pos);
+if (length($replica_pos)) {
+  my $replay_delay = CalculateNumericalOffset($master_pos) - CalculateNumericalOffset($replica_pos);
 
-if ($CRON and $CRON_LIMIT) {
+  if ($CRON and $CRON_LIMIT) {
     if ($replay_delay > $CRON_LIMIT) {
-        print "ERROR: replication lag $MASTER_DB -> $REPLICA_DB is $replay_delay bytes\n";
+      print "ERROR: replication lag $MASTER_DB -> $REPLICA_DB is $replay_delay bytes\n";
     }
-} else {
+  } else {
     print "$replay_delay\n";
+  }
 }
 
 
