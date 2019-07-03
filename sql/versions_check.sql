@@ -13,17 +13,17 @@ select case when setting::bigint < 90400
             else 'Вы используете версию которая находится в разработке,'||chr(10)||
                  'если это production, то рекомендуем вам перейти на стабильную версию PostgreSQL.'
        end as "Проверка мажорной версии PostgreSQL"
-     , case when setting::bigint between 110002 and 119999 or 
-                 setting::bigint between 100007 and 109999 or 
-                 setting::bigint between 90612 and 90699 or 
-                 setting::bigint between 90516 and 90599 or 
-                 setting::bigint between 90421 and 90499
+     , case when setting::bigint between 110003 and 119999 or 
+                 setting::bigint between 100008 and 109999 or 
+                 setting::bigint between 90613 and 90699 or 
+                 setting::bigint between 90517 and 90599 or 
+                 setting::bigint between 90422 and 90499
               then 'У вас стоит один из последних патчей PostgreSQL для вашей версии.'||chr(10)||
                    'Похоже вы следите за обновлениями PostgreSQL. Это хороший факт.'
             else 'Похоже вы не обновляли PostgreSQL, после установки/последнего мажорного обновления, совсем.'||chr (10)||
                  'Это плохо, рекомендуем вам обновиться до последней актуальной версии PostgreSQL.'
        end as "Проверка минорной версии PostgreSQL"
      , 'Актуальные версии на данный момент следующие, в порядке убывания актуальности:'||chr (10)||
-       '11.3, 10.8, 9.6.13, 9.5.17, 9.4.22' as "Список актуальных версий"
+       '11.4, 10.9, 9.6.14, 9.5.18, 9.4.23' as "Список актуальных версий"
   from pg_settings
  where name = 'server_version_num';
