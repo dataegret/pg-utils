@@ -441,21 +441,21 @@ pgGetIndexTypes="SELECT
            WHEN (indexdef ~'USING gist') then 'gist'
            ELSE 'unknown'
        END, count(*)
-       FROM pg_indexes GROUP BY 1 ORDER BY 2"
+       FROM pg_indexes WHERE schemaname NOT IN ('pg_catalog') GROUP BY 1 ORDER BY 2"
 pgGetFuncTypes="SELECT l.lanname,count(*)
        FROM pg_proc p
        LEFT JOIN pg_language l ON p.prolang = l.oid
        LEFT JOIN pg_namespace n ON n.oid = p.pronamespace
-       WHERE n.nspname NOT IN ('information_schema','pg_catalog','pg_toast') GROUP BY 1 ORDER BY 2 DESC;"
+       WHERE n.nspname NOT IN ('information_schema','pg_catalog','pg_toast') GROUP BY 1 ORDER BY 2 DESC"
 
 pgDbProperties=$($psqlCmd2 -c "$pgGetDbProperties" |awk -F: '{print $1" (owner: "$2", encoding: "$3", collate: "$4", ctype: "$5", size: "$6", tablespace: "$7");"}' |xargs echo |sed -e 's/;$/\./g')
 pgDbGetNspNum=$($psqlCmd2 -c "SELECT count(1) FROM pg_catalog.pg_namespace WHERE nspname !~ '^pg_' AND nspname <> 'information_schema'")
 pgGetNspList=$($psqlCmd2 -c "$pgGetNspList" |awk -F: '{print $1"; "}' |xargs echo |sed -e 's/;$/\./g')
 pgDbGetRelNum=$($psqlCmd2 -c "SELECT count(1) FROM pg_catalog.pg_stat_user_tables")
 pgLargestRelsList=$($psqlCmd2 -c "$pgGetLargestRels" |awk -F: '{print $1" (size: "$2");"}' |xargs echo |sed -e 's/;$/\./g')
-pgGetIdxNum=$($psqlCmd2 -c "SELECT count(1) FROM pg_catalog.pg_stat_user_indexes")
+pgGetIdxNum=$($psqlCmd2 -c "SELECT count(1) FROM pg_catalog.pg_indexes WHERE schemaname NOT IN ('pg_catalog')")
 pgGetIdxTypesList=$($psqlCmd2 -c "$pgGetIndexTypes" |awk -F: '{print $1" "$2";"}' |xargs echo |sed -e 's/;$/\./g')
-pgGetFuncNum=$($psqlCmd2 -c "SELECT count(1) FROM pg_catalog.pg_stat_user_functions")
+pgGetFuncNum=$($psqlCmd2 -c "SELECT count(1) FROM pg_catalog.pg_proc LEFT JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname NOT IN ('information_schema','pg_catalog','pg_toast')")
 pgGetFuncList=$($psqlCmd2 -c "$pgGetFuncTypes" |awk -F: '{print $1" "$2";"}' |xargs echo |sed -e 's/;$/\./g')
 pgGetInhNum=$($psqlCmd2 -c "$pgGetInheritanceInfo" |awk -F: '{print $1" parent tables with "$2" child tables."}' |xargs echo)
 
