@@ -6,6 +6,7 @@ use warnings qw(all);
 if ( scalar(@ARGV) < 2 ) { Usage(); }
 
 my ($MASTER,$REPLICA,$CRON,$LIMIT) = @ARGV;
+my $PSQL="PGCONNECT_TIMEOUT=10 psql -qAtX";
 
 if ( defined($CRON) ) {
   if ( !defined($LIMIT) ) { Usage(); }
@@ -14,9 +15,7 @@ if ( defined($CRON) ) {
 }
 
 my $CONN;
-my $PSQL="PGCONNECT_TIMEOUT=10 psql -qAtX";
-my @PORT = split /:/, $MASTER;
-if ( scalar(@PORT) > 1 ) { $CONN="-h $PORT[0] -p $PORT[1]"; } else { $CONN="-h $PORT[0]"; }
+($CONN, $MASTER) = &GetConn($MASTER);
 
 my $pg_version = `$PSQL $CONN -c "SELECT (setting::numeric/10000)::int FROM pg_settings WHERE name='server_version_num'" 2>&1`;
 if ( $? ) { Abort("Failed to check PostgreSQL version of \"$MASTER\"", $pg_version); }
@@ -30,8 +29,20 @@ chomp $master_pos;
 
 my @R = split /,/, $REPLICA;
 foreach my $R ( @R ) {
-  @PORT = split /:/, $R;
-  if ( scalar(@PORT) > 1 ) { $CONN="-h $PORT[0] -p $PORT[1]"; } else { $CONN="-h $PORT[0]"; }
+  my $lim = $LIMIT if defined($LIMIT);
+
+  # Custom limit for replica
+  if ( $R =~ /:[0-9]+[KkMmGg]?[Bb]$/ ) {
+    my $l = $R =~ s/^.*://r;
+    $R =~ s/:[^:]*$//;
+    $lim = GetBytes($l);
+    if ( $lim < 0 ) {
+      Error("Incorrect replica limit \"$lim\"");
+      next;
+    }
+  }
+
+  ($CONN, $R) = &GetConn($R);
 
   my $replica_pos = `$PSQL $CONN -c 'SELECT CASE WHEN pg_is_in_recovery() THEN $lsn_received() ELSE NULL END' 2>&1`;
   if ( $? ) { Error("Failed to get WAL position of \"$R\"", $replica_pos); next; }
@@ -42,8 +53,9 @@ foreach my $R ( @R ) {
     if ( $lag < 0 ) { $lag=0; }
 
     if ( $CRON and $LIMIT ) {
-      if ( $lag > $LIMIT ) { Error("$MASTER -> $R lag is ".GetPretty($lag)); }
-    } else {
+      if ( $lag > $lim ) { Error("$MASTER -> $R lag is ".GetPretty($lag)); }
+    }
+    else {
       print "$MASTER -> $R lag is ".GetPretty($lag)."\n";
     }
   }
@@ -65,13 +77,44 @@ sub Abort
 
 sub Usage
 {
-  print "Usage: $0 <master> <replica>[,<replica2>[,…]] [<cron> <limit>],\n";
+  print "Usage: $0 <master> <replica>[,<replica2>[,…]] [<be_quiet> <threshold>]\n";
   print "where:\n";
-  print "<master>                   - IP and (optionally, via colon) port of the Master, typically localhost (can be cascaded replica)\n";
-  print "<replica>[,<replica2>[,…]] - comma-separated list of replicas, each can have optional port via colon\n";
-  print "<cron>                     - \"yes\" for limited (cron) output\n";
-  print "<limit>                    - lag threshold, suffixes KB, MB or GB can be used, mandatory for cron output\n";
+  print "<master>                   - address of the Master, typically localhost (can be cascaded replica),\n";
+  print "<replica>[,<replica2>[,…]] - comma-separated list of replica addresses (see details below),\n";
+  print "<be_quiet>                 - \"yes\" for limited output, the only lag reported is that above provided threshold (suitable for cron)\n";
+  print "<threshold>                - lag threshold, suffixes KB, MB or GB can be used, mandatory in quiet mode\n\n";
+  print "Master and replica address details:\n";
+  print "- can be DNS name, FQDN or local alias,\n";
+  print "- IPv4 address,\n";
+  print "- IPv6 address, but make sure to use [] around IPv6 addresses, otherwise last group will be treated as port,\n";
+  print "- it is possible to specify port after the address (any of the above) via colon, if necessary\n";
+  print "- timeout will be reported if database cannot be reached within 10 seconds,\n";
+  print "- replica (and only replica) can have it's own threshold specified via colon.\n";
+  print "  In this case, though, it is mandatory to use suffix B, KB, MB or GB, otherwise it'll be treated as port.\n";
+  print "  To specify threshold without port, use double colon before the threshold.\n\n";
+  print "It is safe to specify master in the list of replicas, no lag will be reported.\nThis is handy, as exactly the same check can be deployed on all servers.\n";
   exit(1);
+}
+
+sub GetConn
+{
+  my $text = shift;
+
+  my $port;
+
+  # Strip trailing colons, if any
+  $text =~ s/:+$//;
+
+  # Has port
+  if ( $text =~ /((?::))((?:[0-9]+))$/ ) {
+    $port = $text =~ s/^.*://r;
+    $text =~ s/:[^:]*$//;
+  }
+
+  # Host has square brackets
+  $text =~ s/^\[([^]]*)\]$/$1/ if ( $text =~ /^\[[^]]*\]$/ );
+
+  return ("-h $text".(length($port) ? " -p $port" : ""), $text);
 }
 
 sub GetNumOffset
