@@ -37,6 +37,8 @@ pvLimit="50M"                  # default rate-limit for pv
 # Functions section
 #
 getHardwareData() {
+  serverModel=$(echo $(cat /sys/devices/virtual/dmi/id/sys_vendor /sys/devices/virtual/dmi/id/product_name))
+
   cpuModel=$(awk -F: '/^model name/ {print $2; exit}' /proc/cpuinfo)
   cpuCount=$(awk -F: '/^physical id/ { print $2 }' /proc/cpuinfo |sort -u |wc -l)
   cpuCoreCount=$(lscpu |grep "^CPU(s):" |xargs |cut -d" " -f2)
@@ -168,6 +170,7 @@ getPostgresCommonData() {
 
 printSummary() {
   echo -e "${yellow}Hardware: summary${reset}
+  Server model:      $([[ -n $serverModel ]] && echo $serverModel || echo "${red}Can't understand.${reset}")
   Cpu:               $( [[ -n $cpuData ]] && echo $cpuData || echo "${red}Can't understand.${reset}")
   Numa node(s):      $([[ $numaNodes -gt 1 ]] && echo ${red}$numaNodes${reset} || echo "${green}$numaNodes${reset}")
   Memory:            $([[ -n $memData ]] && echo $memData || echo "${red}Can't understand.${reset}")
