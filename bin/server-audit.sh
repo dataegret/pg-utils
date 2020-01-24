@@ -301,7 +301,7 @@ $( if [[ -n $pgAutoConfigFile ]]; then if [[ $pgAutoConfigNumLines -gt 0 ]]; the
   HBA configuration:         $pgHbaFile ($pgHbaAuthCnt)
   Log directory:             $(if [[ $(echo $pgLogDir |cut -c1) == "/" ]]; then echo "${green}$pgLogDir${reset}"; else echo "${red}$pgDataDir/$pgLogDir${reset}"; fi)
   Recovery?                  $pgRecoveryStatus
-  Replica count:             $pgReplicaCount -- $pgReplicaList
+  Streaming connections:     $pgReplicaCount -- $pgReplicaList
   NUMA policy:               $(if [[ -n $numaCurPolicy ]]; then if [[ $numaCurPolicy = *"interleave"* ]]; then echo -n "${green}$numaCurPolicy${reset}, $numaNodes node(s);"; else echo -n "${red}$numaCurPolicy${reset}, $numaNodes node(s);"; fi; \
                                else echo -n "numa_maps not found;"; fi;
                              echo -n " (vm.zone_reclaim_mode = $([[ $sVmZoneReclaim -eq 1 ]] && echo -n "${red}$sVmZoneReclaim${reset}," || echo -n "${green}$sVmZoneReclaim${reset},")"; 
