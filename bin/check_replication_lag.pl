@@ -33,7 +33,7 @@ foreach my $R ( @R ) {
 
   # Custom limit for replica
   if ( $R =~ /:[0-9]+[KkMmGg]?[Bb]$/ ) {
-    my $l = $R =~ s/^.*://r;
+    (my $l = $R) =~ s/^.*://;
     $R =~ s/:[^:]*$//;
     $lim = GetBytes($l);
     if ( $lim < 0 ) {
@@ -107,14 +107,14 @@ sub GetConn
 
   # Has port
   if ( $text =~ /((?::))((?:[0-9]+))$/ ) {
-    $port = $text =~ s/^.*://r;
+    ($port = $text) =~ s/^.*://;
     $text =~ s/:[^:]*$//;
   }
 
   # Host has square brackets
   $text =~ s/^\[([^]]*)\]$/$1/ if ( $text =~ /^\[[^]]*\]$/ );
 
-  return ("-h $text".(length($port) ? " -p $port" : ""), $text);
+  return ("-h $text".(length($port // '') ? " -p $port" : ""), $text);
 }
 
 sub GetNumOffset
