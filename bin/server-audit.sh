@@ -110,7 +110,7 @@ getPkgInfo() {
   [[ $(which slon) ]] && binSlon=$(which slon) || binSlon=""
   [[ $(which timedatectl) ]] && binTimedatectl=$(which timedatectl) || binTimedatectl=""
 
-  [[ -n $binPgbouncer ]] && pgbVersion=$($binPgbouncer --version | grep -oE '[[:digit:]]{1,}\.[[:digit:]]{1,}\.[[:digit:]]{1,}$') || pgbVersion=""
+  [[ -n $binPgbouncer ]] && pgbVersion=$($binPgbouncer --version |grep -iw pgbouncer | grep -oE '[[:digit:]]{1,}\.[[:digit:]]{1,}\.[[:digit:]]{1,}$') || pgbVersion=""
   [[ -n $binPgpool ]] && pgpVersion=$($binPgpool --version |cut -d" " -f3) || pgpVersion=""
   [[ -n $binPgqadm ]] && pgqaVersion=$($binPgqadm --version |cut -d" " -f3) || pgqaVersion=""
   [[ -n $binQadmin ]] && qadVersion=$($binQadmin --version |cut -d" " -f3) || qadVersion=""
