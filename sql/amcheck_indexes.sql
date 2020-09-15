@@ -1,3 +1,5 @@
+--usage: psql -t -c "select datname from pg_database where datname not in ('template0', 'template1') order by pg_database_size(datname)" | xargs -I {} sh -c 'echo {}; psql -d {} -f ~/stuff/sql/amcheck_indexes.sql'
+
 \set ECHO errors
 \set QUIET on
 \timing off
