@@ -1,4 +1,4 @@
-## Useful DBA tools by PostgreSQL-Consulting.com
+## Useful DBA tools by Data Egret
 ### 83compat.sql
 
 ### check_are_all_subscribed.sql
