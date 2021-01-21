@@ -37,7 +37,7 @@ _pg_stat_statements as (
     sum(blk_read_time) as blk_read_time, sum(blk_write_time) as blk_write_time,
     sum(calls) as calls, sum(rows) as rows
     from pg_stat_statements_normalized p
-    where TRUE
+    where calls > 0
     group by dbid, userid, md5(query_normalized)
 ),
 totals_readable as (
@@ -108,6 +108,6 @@ union all
 (select E'=============================================================================================================\n' ||
 'pos:' || pos || E'\t total time: ' || total_time || ' (' || time_percent || ', CPU: ' || cpu_time_percent || ', IO: ' || io_time_percent || E')\t calls: ' || calls ||
 ' (' || calls_percent || E'%)\t avg_time: ' || avg_time || 'ms (IO: ' || avg_io_time_percent || E')\n' ||
-'user: ' || username || E'\t db: ' || database || E'\t rows: ' || rows || ' (' || row_percent || '%)' || E'\t query:\n' || query || E'\n'
+'user: ' || username || E'\t db: ' || database || E'\t rows: ' || rows || ' (' || row_percent || '%)' || E'\t query:\n' || coalesce(query, 'unknown') || E'\n'
 
 from statements_readable order by pos);
