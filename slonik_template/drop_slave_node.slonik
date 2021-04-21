@@ -1,6 +1,5 @@
 
 include <cluster_config.slonik>;
 
-#DROP NODE (ID=@slave1, EVENT NODE=@master);
-#DROP NODE (ID=@slave2, EVENT NODE=@master);
+#DROP NODE (ID=@slave, EVENT NODE=@master);
 

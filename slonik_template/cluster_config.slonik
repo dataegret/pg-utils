@@ -1,15 +1,13 @@
+define	master	1;
+define	slave	2;
 
-	define	master	1;
-	define	slave1	2;
+define	cluster	slony;
 
-	define	cluster	slony;
-	define	db	[somedb];
+define	main	1;
+define	temp	9999;
 
-	define	main	1;
-	define	temp	9999;
+cluster name = @cluster;
 
-        cluster name = @cluster;
-
-        node 1 admin conninfo = 'dbname=[somedb] user=slony host=[master_db host] port=5432';
-        node 2 admin conninfo = 'dbname=[somedb] user=slony host=[slave_db host] port=5432';
+node 1 admin conninfo = 'dbname=[somedb] user=postgres host=[master_db host] port=5432';
+node 2 admin conninfo = 'dbname=[somedb] user=postgres host=[slave_db host]  port=5432';
 

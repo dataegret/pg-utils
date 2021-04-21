@@ -1,5 +1,5 @@
 
 include <cluster_config.slonik>;
 
-#EXECUTE SCRIPT (SET ID=@main, FILENAME = 'HH-6059-data.sql', EVENT NODE=@master);
+#EXECUTE SCRIPT (SET ID=@main, FILENAME = 'some.sql', EVENT NODE=@master);
 

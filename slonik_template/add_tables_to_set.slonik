@@ -1,7 +1,7 @@
 
 include <cluster_config.slonik>;
 
-create set (ID=@temp, ORIGIN=@master, comment='add one table to replication');
+create set (ID=@temp, ORIGIN=@master, comment='temporary set to add tables to existing replication');
 
 SYNC (ID=@master);
 WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT=0);
@@ -10,8 +10,7 @@ WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT=0);
 #
 
 
-SUBSCRIBE SET (ID=@temp, PROVIDER=@master, RECEIVER=@slave1, FORWARD=YES);
-#SUBSCRIBE SET (ID=@temp, PROVIDER=@master, RECEIVER=@slave2, FORWARD=YES);
+SUBSCRIBE SET (ID=@temp, PROVIDER=@master, RECEIVER=@slave, FORWARD=YES);
 
 SYNC (ID=@master);
 WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT=0);
