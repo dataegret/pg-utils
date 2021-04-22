@@ -1,0 +1,35 @@
+include <cluster_config.slonik>;
+
+ECHO 'INIT CLUSTER';
+INIT CLUSTER (ID=@master, comment = @master_name);
+ECHO 'INIT CLUSTER DONE';
+
+ECHO 'STORE NODE';
+STORE NODE (ID=@slave, comment = @slave_name, EVENT NODE=@master);
+ECHO 'STORE NODE DONE';
+
+ECHO 'STORE PATH';
+STORE PATH (server = @master, client = @slave,  conninfo=@master_conn);
+STORE PATH (server = @slave,  client = @master, conninfo=@slave_conn);
+ECHO 'STORE PATH DONE';
+
+ECHO 'CREATE SET';
+CREATE SET (ID=@main, ORIGIN=@master, comment='main replication set');
+ECHO 'CREATE SET DONE';
+
+ECHO 'SET ADD TABLE';
+SET ADD TABLE (SET ID=@main, ORIGIN=@master, ID=1, fully qualified name = 'public._test');
+ECHO 'SET ADD TABLE DONE';
+
+ECHO 'SUBSCRIBE SET';
+SUBSCRIBE SET (ID=@main, PROVIDER=@master, RECEIVER=@slave, FORWARD=YES);
+ECHO 'DONE SUBSCRIBE SET';
+
+ECHO 'SYNC';
+SYNC (ID=@master);
+ECHO 'SYNC DONE';
+
+ECHO 'WAIT FOR EVENT SYNC';
+WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT = 0);
+ECHO 'WAIT FOR EVENT SYNC DONE';
+
