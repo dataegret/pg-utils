@@ -20,10 +20,10 @@ my $CONN;
 my $pg_version = `$PSQL $CONN -c "SELECT (setting::numeric/10000)::int FROM pg_settings WHERE name='server_version_num'" 2>&1`;
 if ( $? ) { Abort("Failed to check PostgreSQL version of \"$MASTER\"", $pg_version); }
 
-my $lsn_current = $pg_version < 10 ? "pg_current_xlog_location" : "pg_current_wal_lsn";
-my $lsn_received = $pg_version < 10 ? "pg_last_xlog_receive_location" : "pg_last_wal_receive_lsn";
+my $lsn_current = $pg_version < 10 ? "pg_current_xlog_location()" : "pg_current_wal_lsn()";
+my $lsn_received = $pg_version < 10 ? "greatest(pg_last_xlog_receive_location(), pg_last_xlog_replay_location())" : "greatest(pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn())";
 
-my $master_pos = `$PSQL $CONN -c 'SELECT CASE WHEN pg_is_in_recovery() THEN $lsn_received() ELSE $lsn_current() END' 2>&1`;
+my $master_pos = `$PSQL $CONN -c 'SELECT CASE WHEN pg_is_in_recovery() THEN $lsn_received ELSE $lsn_current END' 2>&1`;
 if ( $? ) { Abort("Failed to get WAL position of \"$MASTER\"", $master_pos); }
 chomp $master_pos;
 
@@ -44,7 +44,7 @@ foreach my $R ( @R ) {
 
   ($CONN, $R) = &GetConn($R);
 
-  my $replica_pos = `$PSQL $CONN -c 'SELECT CASE WHEN pg_is_in_recovery() THEN $lsn_received() ELSE NULL END' 2>&1`;
+  my $replica_pos = `$PSQL $CONN -c 'SELECT CASE WHEN pg_is_in_recovery() THEN $lsn_received ELSE NULL END' 2>&1`;
   if ( $? ) { Error("Failed to get WAL position of \"$R\"", $replica_pos); next; }
   chomp $replica_pos;
 
