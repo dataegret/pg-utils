@@ -8,6 +8,12 @@ define	temp	9999;
 
 cluster name = @cluster;
 
-node 1 admin conninfo = 'dbname=[somedb] user=postgres host=[master_db host] port=5432';
-node 2 admin conninfo = 'dbname=[somedb] user=postgres host=[slave_db host]  port=5432';
+define  master_name  [master_db host];
+define  slave_name   [slave_db host];
+
+define  master_conn  'dbname=[somedb] user=postgres host=[master_db host]';
+define  slave_conn   'dbname=[somedb] user=postgres host=[slave_db host]';
+
+node @master admin conninfo = @master_conn;
+node @slave  admin conninfo = @slave_conn;
 
