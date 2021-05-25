@@ -333,7 +333,7 @@ DECLARE
   _estimated_tuples BIGINT;
 BEGIN
 
-  RAISE NOTICE 'working with %.%.% %', _datname, _schemaname, _relname, _indexrelname;
+  --RAISE NOTICE 'working with %.%.% %', _datname, _schemaname, _relname, _indexrelname;
 
   --get initial index size
   SELECT indexsize INTO _indexsize_before
