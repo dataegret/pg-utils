@@ -11,7 +11,7 @@ CREATE TABLE index_watch.reindex_history
   schemaname name not null,
   relname name not null,
   indexrelname name not null,
-  server_version_num integer not null default current_setting('server_version_num'),
+  server_version_num integer not null default current_setting('server_version_num')::integer,
   indexsize_before BIGINT not null,
   indexsize_after BIGINT not null,
   estimated_tuples bigint not null,
