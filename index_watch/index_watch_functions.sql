@@ -1,80 +1,34 @@
 CREATE EXTENSION IF NOT EXISTS dblink;
 ALTER EXTENSION dblink UPDATE;
 
-CREATE SCHEMA index_watch;
-
-CREATE TABLE index_watch.reindex_history
-(
-  id bigserial primary key,
-  entry_timestamp timestamptz not null default now(),
-  datname name not null,
-  schemaname name not null,
-  relname name not null,
-  indexrelname name not null,
-  server_version_num integer not null default current_setting('server_version_num')::integer,
-  indexsize_before BIGINT not null,
-  indexsize_after BIGINT not null,
-  estimated_tuples bigint not null,
-  reindex_duration interval not null,
-  analyze_duration interval not null
-);
-create index reindex_history_index on index_watch.reindex_history(datname, schemaname, relname, indexrelname, entry_timestamp);
-
-CREATE TABLE index_watch.index_history 
-(
-  id bigserial primary key,
-  entry_timestamp timestamptz not null default now(),
-  datname name not null,
-  schemaname name not null,
-  relname name not null,
-  indexrelname name not null,
-  server_version_num integer not null default current_setting('server_version_num')::integer,
-  indexsize BIGINT not null,
-  estimated_tuples BIGINT not null
-);
-create index index_history_index on index_watch.index_history(datname, schemaname, relname, indexrelname, entry_timestamp);
-
-
-
-CREATE TABLE index_watch.config
-(
-  id bigserial primary key,
-  datname name,
-  schemaname name,
-  relname name,
-  indexrelname name,
-  key text not null,
-  value text,
-  comment text  
-);
-CREATE UNIQUE INDEX config_u1 on index_watch.config(key) WHERE datname IS NULL;
-CREATE UNIQUE INDEX config_u2 on index_watch.config(key, datname) WHERE schemaname IS NULL;
-CREATE UNIQUE INDEX config_u3 on index_watch.config(key, datname, schemaname) WHERE relname IS NULL;
-CREATE UNIQUE INDEX config_u4 on index_watch.config(key, datname, schemaname, relname) WHERE indexrelname IS NULL;
-CREATE UNIQUE INDEX config_u5 on index_watch.config(key, datname, schemaname, relname, indexrelname);
-ALTER TABLE index_watch.config ADD CONSTRAINT inherit_check1 CHECK (indexrelname IS NULL OR indexrelname IS NOT NULL AND relname    IS NOT NULL);
-ALTER TABLE index_watch.config ADD CONSTRAINT inherit_check2 CHECK (relname      IS NULL OR relname      IS NOT NULL AND schemaname IS NOT NULL);
-ALTER TABLE index_watch.config ADD CONSTRAINT inherit_check3 CHECK (schemaname   IS NULL OR schemaname   IS NOT NULL AND datname    IS NOT NULL);
---DEFAULT GLOBAL settings
-INSERT INTO index_watch.config (key, value, comment) VALUES 
-('index_size_threshold', '100MB', 'ignore indexes under 100MB size unless forced entries found in history'),
-('index_rebuild_scale_factor', '2', 'rebuild indexes by default estimated bloat over 1.5x'),
-('minimum_reliable_index_size', '32kB', 'small indexes not reliable to use as gauge'),
-('reindex_history_retention_period','10 years', 'reindex history default retention period'),
-('index_history_retention_period', '1 year', 'index history default retention period')
-;
-
-
-
+--current version of code
 CREATE OR REPLACE FUNCTION index_watch.version()
 RETURNS TEXT AS
 $BODY$
 BEGIN
-    RETURN '0.3';
+    RETURN '0.4';
 END;
 $BODY$
 LANGUAGE plpgsql IMMUTABLE;
 
+--minimum table structure version required
+CREATE OR REPLACE FUNCTION index_watch._check_structure_version()
+RETURNS VOID AS
+$BODY$
+DECLARE
+  _tables_version INTEGER;
+  _required_version INTEGER :=1;
+BEGIN
+    SELECT version INTO STRICT _tables_version FROM index_watch.tables_version;	
+    IF (_tables_version<_required_version) THEN
+	RAISE EXCEPTION 'current tables version % is less than minimally required % for % code version, please update tables structure', _tables_version, _required_version, index_watch.version();
+    END IF;
+    RETURN;
+END;
+$BODY$
+LANGUAGE plpgsql STABLE;
+
+--convert patterns from psql format to like format
 CREATE OR REPLACE FUNCTION index_watch._pattern_convert(_var text)
 RETURNS TEXT AS
 $BODY$
@@ -89,27 +43,54 @@ END;
 $BODY$
 LANGUAGE plpgsql STRICT IMMUTABLE;
 
+
 CREATE OR REPLACE FUNCTION index_watch.get_setting(_datname text, _schemaname text, _relname text, _indexrelname text, _key TEXT)
 RETURNS TEXT AS
 $BODY$
 DECLARE
     _value TEXT;
-BEGIN
-    _datname      := index_watch._pattern_convert(_datname);
-    _schemaname   := index_watch._pattern_convert(_schemaname);
-    _relname      := index_watch._pattern_convert(_relname);
-    _indexrelname := index_watch._pattern_convert(_indexrelname);
+BEGIN	
+    PERFORM index_watch._check_structure_version();
     --RAISE NOTICE 'DEBUG: |%|%|%|%|', _datname, _schemaname, _relname, _indexrelname;
     SELECT _t.value INTO _value FROM (
-      SELECT 1 AS priority, value FROM index_watch.config WHERE config.key=_key AND (config.datname OPERATOR(pg_catalog.~) _datname) AND (config.schemaname OPERATOR(pg_catalog.~) _schemaname) AND (config.relname OPERATOR(pg_catalog.~) _relname) AND (config.indexrelname OPERATOR(pg_catalog.~) _indexrelname)
+      --per index setting 	
+      SELECT 1 AS priority, value FROM index_watch.config WHERE 
+        _key=config.key 
+	AND (_datname      OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.datname)) 
+	AND (_schemaname   OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.schemaname)) 
+	AND (_relname      OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.relname)) 
+	AND (_indexrelname OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.indexrelname)) 
+	AND config.indexrelname IS NOT NULL
+	AND TRUE
       UNION ALL
-      SELECT 2 AS priority, value FROM index_watch.config WHERE config.key=_key AND (config.datname OPERATOR(pg_catalog.~) _datname) AND (config.schemaname OPERATOR(pg_catalog.~) _schemaname) AND (config.relname OPERATOR(pg_catalog.~) _relname)
+      --per table setting
+      SELECT 2 AS priority, value FROM index_watch.config WHERE
+        _key=config.key
+        AND (_datname      OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.datname))
+        AND (_schemaname   OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.schemaname))
+        AND (_relname      OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.relname))
+        AND config.relname IS NOT NULL
+        AND config.indexrelname IS NULL
       UNION ALL
-      SELECT 3 AS priority, value FROM index_watch.config WHERE config.key=_key AND (config.datname OPERATOR(pg_catalog.~) _datname) AND (config.schemaname OPERATOR(pg_catalog.~) _schemaname)
+      --per schema setting
+      SELECT 3 AS priority, value FROM index_watch.config WHERE
+        _key=config.key
+        AND (_datname      OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.datname))
+        AND (_schemaname   OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.schemaname))
+        AND config.schemaname IS NOT NULL
+        AND config.relname IS NULL
       UNION ALL
-      SELECT 4 AS priority, value FROM index_watch.config WHERE config.key=_key AND (config.datname OPERATOR(pg_catalog.~) _datname)
+      --per database setting
+      SELECT 4 AS priority, value FROM index_watch.config WHERE
+        _key=config.key
+        AND (_datname      OPERATOR(pg_catalog.~) index_watch._pattern_convert(config.datname))
+        AND config.datname IS NOT NULL
+        AND config.schemaname IS NULL
       UNION ALL
-      SELECT 5 AS priority, value FROM index_watch.config WHERE config.key=_key AND config.datname IS NULL
+      --global setting
+      SELECT 5 AS priority, value FROM index_watch.config WHERE
+        _key=config.key
+        AND config.datname IS NULL
     ) AS _t
     WHERE value IS NOT NULL
     ORDER BY priority
@@ -124,6 +105,7 @@ CREATE OR REPLACE FUNCTION index_watch.set_or_replace_setting(_datname text, _sc
 RETURNS VOID AS
 $BODY$
 BEGIN
+    PERFORM index_watch._check_structure_version();
     IF _datname IS NULL       THEN
       INSERT INTO index_watch.config (datname, schemaname, relname, indexrelname, key, value, comment) 
       VALUES (_datname, _schemaname, _relname, _indexrelname, _key, _value, _comment)
@@ -261,6 +243,7 @@ RETURNS TABLE(datname name, schemaname name, relname name, indexrelname name, in
 AS
 $BODY$
 BEGIN
+  PERFORM index_watch._check_structure_version();
   -- compare current index size per tuple with the best result since reindex value (including just after reindex data from reindex_history)
   RETURN QUERY 
   WITH 
@@ -294,7 +277,7 @@ BEGIN
       FROM _all_history_since_reindex 
       JOIN _last_reindex_values USING (schemaname, relname, indexrelname)
       WHERE 
-        _all_history_since_reindex.indexsize > index_watch.get_setting(_datname, _all_history_since_reindex.schemaname, _all_history_since_reindex.relname, _all_history_since_reindex.indexrelname, 'minimum_reliable_index_size')::bigint
+        _all_history_since_reindex.indexsize > pg_size_bytes(index_watch.get_setting(_datname, _all_history_since_reindex.schemaname, _all_history_since_reindex.relname, _all_history_since_reindex.indexrelname, 'minimum_reliable_index_size'))
       ORDER BY schemaname, relname, indexrelname, _all_history_since_reindex.indexsize::real/_all_history_since_reindex.estimated_tuples::real
     ),
     _current_state AS (
@@ -376,6 +359,7 @@ $BODY$
 DECLARE
   _index RECORD;
 BEGIN
+  PERFORM index_watch._check_structure_version();
   FOR _index IN 
     SELECT datname, schemaname, relname, indexrelname, indexsize, estimated_bloat
     FROM index_watch.get_index_bloat_estimates(_datname)
@@ -416,6 +400,7 @@ $BODY$
 DECLARE 
   _datname NAME;
 BEGIN
+    PERFORM index_watch._check_structure_version();
     PERFORM index_watch._cleanup_old_records();
     COMMIT;
 
