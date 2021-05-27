@@ -59,7 +59,7 @@ ALTER TABLE index_watch.config ADD CONSTRAINT inherit_check3 CHECK (schemaname  
 INSERT INTO index_watch.config (key, value, comment) VALUES 
 ('index_size_threshold', '100MB', 'ignore indexes under 100MB size unless forced entries found in history'),
 ('index_rebuild_scale_factor', '2', 'rebuild indexes by default estimated bloat over 1.5x'),
-('minimum_reliable_index_size', (4*8192)::text, 'small indexes not reliable to use as gauge'),
+('minimum_reliable_index_size', '32kB', 'small indexes not reliable to use as gauge'),
 ('reindex_history_retention_period','10 years', 'reindex history default retention period'),
 ('index_history_retention_period', '1 year', 'index history default retention period')
 ;
