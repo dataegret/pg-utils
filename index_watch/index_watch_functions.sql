@@ -411,6 +411,7 @@ BEGIN
         AND datallowconn 
         AND datname<>current_database()
         AND index_watch.get_setting(datname, NULL, NULL, NULL, 'skip')::boolean IS DISTINCT FROM TRUE
+      ORDER BY datname
     LOOP
       PERFORM index_watch._record_indexes_info(_datname, NULL, NULL, NULL);
       COMMIT;
