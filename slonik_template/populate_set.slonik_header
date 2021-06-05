@@ -1,0 +1,18 @@
+
+include <cluster_config.slonik>;
+
+ECHO 'CREATE TEMP SET';
+create set (ID=@temp, ORIGIN=@master, comment='temporary set to add tables to existing replication');
+ECHO 'CREATE TEMP SET DONE';
+
+ECHO 'SYNC';
+SYNC (ID=@master);
+ECHO 'SYNC DONE';
+
+ECHO 'WAIT FOR EVENT SYNC';
+WAIT FOR EVENT (ORIGIN=ALL, CONFIRMED=ALL, WAIT ON=@master, TIMEOUT=0);
+ECHO 'WAIT FOR EVENT SYNC DONE';
+
+ECHO 'ADDING TABLES AND SEQUENCES TO TEMP SET';
+
+
