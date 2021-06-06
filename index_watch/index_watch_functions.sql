@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION index_watch.version()
 RETURNS TEXT AS
 $BODY$
 BEGIN
-    RETURN '0.4';
+    RETURN '0.6';
 END;
 $BODY$
 LANGUAGE plpgsql IMMUTABLE;
@@ -150,7 +150,7 @@ BEGIN
       CASE WHEN relpages=0 THEN greatest(1, indexreltuples) ELSE (relsize::real/(relpages::real*current_setting('block_size')::real)*indexreltuples::real)::BIGINT END AS estimated_tuples
     FROM
     dblink('dbname='||pg_catalog.quote_ident(_datname),
-    '
+    E'
       SELECT
         pg_stat_user_indexes.schemaname, 
         pg_stat_user_indexes.relname, 
@@ -162,6 +162,7 @@ BEGIN
       FROM pg_catalog.pg_stat_user_indexes 
       JOIN pg_catalog.pg_class AS c1 on c1.oid=pg_stat_user_indexes.relid
       JOIN pg_catalog.pg_class AS c2 on c2.oid=pg_stat_user_indexes.indexrelid
+      WHERE NOT EXISTS (SELECT FROM pg_constraint WHERE pg_constraint.conindid=pg_stat_user_indexes.indexrelid and pg_constraint.contype=\'x\')
     ')
     AS _res(schemaname name, relname name, indexrelname name, relpages BIGINT, indexreltuples BIGINT, relsize BIGINT, indexsize BIGINT)
     WHERE 
@@ -278,7 +279,7 @@ BEGIN
       JOIN _last_reindex_values USING (schemaname, relname, indexrelname)
       WHERE 
         _all_history_since_reindex.indexsize > pg_size_bytes(index_watch.get_setting(_datname, _all_history_since_reindex.schemaname, _all_history_since_reindex.relname, _all_history_since_reindex.indexrelname, 'minimum_reliable_index_size'))
-      ORDER BY schemaname, relname, indexrelname, _all_history_since_reindex.indexsize::real/_all_history_since_reindex.estimated_tuples::real
+      ORDER BY schemaname, relname, indexrelname, _all_history_since_reindex.estimated_tuples::real/_all_history_since_reindex.indexsize::real DESC
     ),
     _current_state AS (
       SELECT 
@@ -290,7 +291,8 @@ BEGIN
     _result AS (
        SELECT 
          _current_state.*, 
-         ((_current_state.indexsize::real/_current_state.estimated_tuples::real)/(_best_values.indexsize::real/_best_values.estimated_tuples::real)) AS estimated_bloat
+         --((_current_state.indexsize::real/_current_state.estimated_tuples::real)/(_best_values.indexsize::real/_best_values.estimated_tuples::real)) AS estimated_bloat
+         ((_current_state.indexsize::real*_best_values.estimated_tuples::real)/(_best_values.indexsize::real*_current_state.estimated_tuples::real)) AS estimated_bloat
        FROM _current_state
        LEFT JOIN _best_values USING (schemaname, relname, indexrelname)
     )
