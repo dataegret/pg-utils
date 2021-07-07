@@ -9,7 +9,7 @@ pg_size_pretty(table_size) as table_size,
 index_name,
 pg_size_pretty(index_size) as index_size,
 idx_scan as index_scans,
-round((free_space*100/index_size)::numeric, 1) as waste_percent,
+round((free_space*100/index_size)::numeric, 1) as "waste_%",
 pg_size_pretty(free_space) as waste
 from (
     select schemaname, p.relname as table_name, indexrelname as index_name,
