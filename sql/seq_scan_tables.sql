@@ -1,6 +1,6 @@
 
 SELECT
-	schemaname||'.'||relname,
+	schemaname||'.'||relname AS table,
 	n_live_tup,
 	seq_scan,
 	seq_tup_read,
