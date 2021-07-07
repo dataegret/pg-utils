@@ -1,6 +1,6 @@
 
 SELECT pg_stat_user_indexes.schemaname || '.' || pg_stat_user_indexes.relname AS table
-     , pg_stat_user_indexes.indexrelname
+     , pg_stat_user_indexes.indexrelname AS index
      , pg_stat_user_indexes.idx_scan
      , psut.write_activity
      , psut.seq_scan
