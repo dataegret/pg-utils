@@ -3,7 +3,7 @@ buffer_data AS (
         SELECT
                 relfilenode,
                 pg_size_pretty(sum(case when isdirty then 1 else 0 end) * 8192) as dirty,
-                round(100.0 * sum(case when isdirty then 1 else 0 end) / count(*), 1) as "%_dirty"
+                round(100.0 * sum(case when isdirty then 1 else 0 end) / count(*), 1) as "dirty_%"
         FROM public.pg_buffercache GROUP BY 1
 )
 
