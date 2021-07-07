@@ -1,7 +1,7 @@
 
 SELECT
 pg_stat_all_tables.schemaname||'.'||pg_stat_all_tables.relname,
-pg_size_pretty(pg_relation_size(relid)),
+pg_size_pretty(pg_relation_size(relid)) size,
 coalesce(t.spcname, (select spcname from pg_tablespace where oid=(select dattablespace from pg_database where datname=current_database()))) AS tblsp,
 seq_scan,
 idx_scan,
