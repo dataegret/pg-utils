@@ -1,11 +1,9 @@
-
-
 WITH 
 index_data AS
 (SELECT *,string_to_array(indkey::text,' ') as key_array,array_length(string_to_array(indkey::text,' '),1) as nkeys from pg_index)
 
 SELECT
-i1.indrelid::regclass::text,
+i1.indrelid::regclass::text as table,
 pg_get_indexdef(i1.indexrelid) main_index,
 pg_get_indexdef(i2.indexrelid) redundant_index,
 pg_size_pretty(pg_relation_size(i2.indexrelid)) redundant_index_size

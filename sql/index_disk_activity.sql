@@ -3,12 +3,12 @@ buffer_data AS (
         SELECT
                 relfilenode,
                 pg_size_pretty(sum(case when isdirty then 1 else 0 end) * 8192) as dirty,
-                round(100.0 * sum(case when isdirty then 1 else 0 end) / count(*), 1) as "%_dirty"
+                round(100.0 * sum(case when isdirty then 1 else 0 end) / count(*), 1) as "dirty_%"
         FROM public.pg_buffercache GROUP BY 1
 )
 
 SELECT
-	(n.nspname||'.'||c.relname)::varchar(30) AS "table",
+	(n.nspname||'.'||c.relname)::varchar(40) AS "table",
 	i.relname AS "index",
         coalesce(t.spcname, (select spcname from pg_tablespace where oid=(select dattablespace from pg_database where datname=current_database()))) AS tblsp,
 	pg_size_pretty(pg_relation_size(i.oid)) AS size,
@@ -19,7 +19,7 @@ SELECT
 	pg_stat_get_numscans(i.oid) AS idx_scan,
 --	pg_stat_get_tuples_returned(i.oid) AS idx_tup_read,
         buffer_data.dirty,
-        buffer_data."%_dirty"
+        buffer_data."dirty_%"
 FROM pg_class c
 	JOIN pg_index x ON c.oid = x.indrelid
 	JOIN pg_class i ON i.oid = x.indexrelid
@@ -31,6 +31,3 @@ WHERE c.relkind = 'r'
 AND (t.spcname IS DISTINCT FROM 'pg_global') and (n.nspname IS DISTINCT FROM 'pg_catalog')
 AND pg_stat_get_blocks_fetched(i.oid) - pg_stat_get_blocks_hit(i.oid)>100
 ORDER BY disk DESC NULLS LAST, idx_scan DESC LIMIT 50;
-
-
-

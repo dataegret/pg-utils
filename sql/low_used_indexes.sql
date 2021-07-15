@@ -1,6 +1,5 @@
-
-SELECT pg_stat_user_indexes.schemaname || '.' || pg_stat_user_indexes.relname tablemane
-     , pg_stat_user_indexes.indexrelname
+SELECT pg_stat_user_indexes.schemaname || '.' || pg_stat_user_indexes.relname as table
+     , pg_stat_user_indexes.indexrelname as index
      , pg_stat_user_indexes.idx_scan
      , psut.write_activity
      , psut.seq_scan
@@ -25,4 +24,4 @@ SELECT pg_stat_user_indexes.schemaname || '.' || pg_stat_user_indexes.relname ta
  where pg_index.indisunique is false
    and pg_stat_user_indexes.idx_scan::float / (psut.write_activity + 1)::float < 0.01
    and psut.write_activity > case when pg_is_in_recovery () then -1 else 10000 end
-  order by 4 desc, 1, 2
+  order by 4 desc, 1, 2;

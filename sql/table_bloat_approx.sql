@@ -1,13 +1,12 @@
 --faster version of table_bloat.sql which returns approximate results and doesn't read whole table (but reads toast tables)
 --pgstattuple v1.3+ extension required (available since postgresql 9.5)
 --WARNING: without table name/mask query will read all available tables which could cause I/O spikes
-select nspname,
-relname,
+select nspname||'.'||relname as table,
 pg_size_pretty(relation_size + toast_relation_size) as total_size,
 pg_size_pretty(toast_relation_size) as toast_size,
-round(((relation_size - (relation_size - free_space)*100/fillfactor)*100/greatest(relation_size, 1))::numeric, 1) table_waste_percent,
+round(((relation_size - (relation_size - free_space)*100/fillfactor)*100/greatest(relation_size, 1))::numeric, 1) "table_waste_%",
 pg_size_pretty((relation_size - (relation_size - free_space)*100/fillfactor)::bigint) table_waste,
-round(((toast_free_space + relation_size - (relation_size - free_space)*100/fillfactor)*100/greatest(relation_size + toast_relation_size, 1))::numeric, 1) total_waste_percent,
+round(((toast_free_space + relation_size - (relation_size - free_space)*100/fillfactor)*100/greatest(relation_size + toast_relation_size, 1))::numeric, 1) "total_waste_%",
 pg_size_pretty((toast_free_space + relation_size - (relation_size - free_space)*100/fillfactor)::bigint) total_waste
 from (
     select nspname, relname,

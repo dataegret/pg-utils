@@ -1,7 +1,6 @@
-
 SELECT * FROM (
 SELECT
-	(n.nspname||'.'||c.relname)::varchar(30) AS "table",
+	(n.nspname||'.'||c.relname)::varchar(40) AS "table",
 	i.relname AS "index",
 	t.spcname AS tblsp,
 	pg_size_pretty(pg_relation_size(i.oid)) AS size,
@@ -22,4 +21,3 @@ WHERE c.relkind = 'r'
 WHERE d_w_rat<25
 AND tblsp='ssd'
 ORDER BY disk DESC NULLS LAST;
-
