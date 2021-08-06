@@ -292,7 +292,7 @@ BEGIN
        SELECT 
          _current_state.*, 
          --((_current_state.indexsize::real/_current_state.estimated_tuples::real)/(_best_values.indexsize::real/_best_values.estimated_tuples::real)) AS estimated_bloat
-         ((_current_state.indexsize::real*_best_values.estimated_tuples::real)/(_best_values.indexsize::real*_current_state.estimated_tuples::real)) AS estimated_bloat
+	case WHEN (_best_values.indexsize::real*_current_state.estimated_tuples::real=0) THEN 1000 ELSE ((_current_state.indexsize::real*_best_values.estimated_tuples::real)/(_best_values.indexsize::real*_current_state.estimated_tuples::real)) END AS estimated_bloat
        FROM _current_state
        LEFT JOIN _best_values USING (schemaname, relname, indexrelname)
     )
