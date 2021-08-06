@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION index_watch.version()
 RETURNS TEXT AS
 $BODY$
 BEGIN
-    RETURN '0.6';
+    RETURN '0.7';
 END;
 $BODY$
 LANGUAGE plpgsql IMMUTABLE;
