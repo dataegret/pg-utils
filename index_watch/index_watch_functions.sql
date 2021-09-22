@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION index_watch.version()
 RETURNS TEXT AS
 $BODY$
 BEGIN
-    RETURN '0.7';
+    RETURN '0.8';
 END;
 $BODY$
 LANGUAGE plpgsql IMMUTABLE;
@@ -149,7 +149,7 @@ BEGIN
       _datname, _res.schemaname, _res.relname, _res.indexrelname, _res.indexsize,
       CASE WHEN relpages=0 THEN greatest(1, indexreltuples) ELSE (relsize::real/(relpages::real*current_setting('block_size')::real)*indexreltuples::real)::BIGINT END AS estimated_tuples
     FROM
-    dblink('dbname='||pg_catalog.quote_ident(_datname),
+    dblink('port='||current_setting('port')||' dbname='||pg_catalog.quote_ident(_datname),
     E'
       SELECT
         pg_stat_user_indexes.schemaname, 
@@ -330,12 +330,12 @@ BEGIN
   
   --time to dance
   _timestamp := pg_catalog.clock_timestamp ();
-  PERFORM dblink('dbname='||pg_catalog.quote_ident(_datname), 'REINDEX INDEX CONCURRENTLY '||pg_catalog.quote_ident(_schemaname)||'.'||pg_catalog.quote_ident(_indexrelname));
+  PERFORM dblink('port='||current_setting('port')||' dbname='||pg_catalog.quote_ident(_datname), 'REINDEX INDEX CONCURRENTLY '||pg_catalog.quote_ident(_schemaname)||'.'||pg_catalog.quote_ident(_indexrelname));
   _reindex_duration := pg_catalog.clock_timestamp ()-_timestamp;
   
   --analyze 
   _timestamp := clock_timestamp ();
-  PERFORM dblink('dbname='||pg_catalog.quote_ident(_datname), 'ANALYZE '||pg_catalog.quote_ident(_schemaname)||'.'||pg_catalog.quote_ident(_relname));
+  PERFORM dblink('port='||current_setting('port')||' dbname='||pg_catalog.quote_ident(_datname), 'ANALYZE '||pg_catalog.quote_ident(_schemaname)||'.'||pg_catalog.quote_ident(_relname));
   _analyze_duration := pg_catalog.clock_timestamp ()-_timestamp;
 
   --get final index size
