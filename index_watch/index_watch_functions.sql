@@ -397,11 +397,33 @@ LANGUAGE plpgsql;
 
 
 
+CREATE OR REPLACE FUNCTION index_watch._check_lock() 
+RETURNS bigint AS
+$BODY$
+DECLARE 
+  _id bigint;
+  _is_not_running boolean;
+BEGIN
+  SELECT oid FROM pg_namespace WHERE nspname='index_watch' INTO _id; 
+  SELECT pg_try_advisory_lock(_id) INTO _is_not_running;
+  IF NOT _is_not_running THEN 
+      RAISE 'The previous launch of the index_watch.periodic is still running.';
+  END IF;
+  RETURN _id;
+END;
+$BODY$
+LANGUAGE plpgsql;
+
+
+
 CREATE OR REPLACE PROCEDURE index_watch.periodic(real_run BOOLEAN DEFAULT FALSE) AS
 $BODY$
 DECLARE 
   _datname NAME;
+  _id bigint;
 BEGIN
+    SELECT index_watch._check_lock() INTO _id;
+
     PERFORM index_watch._check_structure_version();
     PERFORM index_watch._cleanup_old_records();
     COMMIT;
@@ -422,6 +444,8 @@ BEGIN
         COMMIT;
       END IF;
     END LOOP;
+
+    PERFORM pg_advisory_unlock(_id);
 END;
 $BODY$
 LANGUAGE plpgsql;
