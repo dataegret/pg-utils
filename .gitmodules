@@ -1,0 +1,3 @@
+[submodule "pg_index_watch"]
+	path = pg_index_watch
+	url = https://github.com/dataegret/pg_index_watch
