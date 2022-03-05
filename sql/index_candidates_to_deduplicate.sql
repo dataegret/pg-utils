@@ -36,6 +36,6 @@ reindex index concurrently %s;
 pg_size_pretty(index_size_bytes), pg_size_pretty(table_size_bytes), sum_most_common_freqs, index_def, (case when schema_name = 'public' then format('%I', index_name) else format('%I.%I', schema_name, index_name) end)) as reindex_queries
 
 FROM selected_indexes WHERE
-(bt_metap(schema_name || '.' || index_name)).allequalimage = 'f'--skip indexes already in new format
+(bt_metap(format('%I.%I', schema_name, index_name))).allequalimage = 'f'--skip indexes already in new format
 AND 0.05 <= ALL(sum_most_common_freqs)--require at least 5% of duplicates on each indexed column
 ORDER BY index_size_bytes DESC;
