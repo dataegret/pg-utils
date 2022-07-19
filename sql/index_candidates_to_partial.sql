@@ -14,6 +14,6 @@ FROM pg_index
 JOIN pg_attribute ON pg_attribute.attrelid = pg_index.indrelid AND pg_attribute.attnum = ANY(pg_index.indkey)
 JOIN pg_stats ON (pg_stats.schemaname || '.' || pg_stats.tablename)::regclass = pg_attribute.attrelid AND pg_stats.attname = pg_attribute.attname
 WHERE pg_relation_size(pg_index.indexrelid) > 10*8192
-AND (SELECt SUM(a) FROM unnest(most_common_freqs[1:5]) a) >= 0.95
+AND (SELECT SUM(a) FROM unnest(most_common_freqs[1:5]) a) >= 0.95
 AND array_length(pg_index.indkey, 1) = 1
 ORDER BY pg_relation_size(pg_index.indexrelid) DESC,1,2,3;
