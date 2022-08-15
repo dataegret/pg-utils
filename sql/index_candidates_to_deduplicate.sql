@@ -25,6 +25,7 @@ WHERE
 c.relkind IN ('r', 'm') AND i.relkind = 'i'--skip partitioned indexes
 AND (c.relpersistence = 'p' or not pg_is_in_recovery())--skip unlogged indexes
 AND x.indisunique = 'f'--skip unique indexes
+AND x.indisvalid = 't'
 AND pg_relation_size(x.indexrelid) > 1024*1024--skip indexes smaller than 1MB
 AND n.nspname != 'pg_catalog'
 )
