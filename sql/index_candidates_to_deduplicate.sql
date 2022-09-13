@@ -11,9 +11,9 @@ SELECT n.nspname AS schema_name,
   replace(pg_get_indexdef(i.oid), 'CREATE INDEX ', '') AS index_def,
   (SELECT array_agg(round(f::numeric,4)) FROM
   (
-    (SELECT max(null_frac) + (1 - max(null_frac))*SUM(u) AS f FROM pg_attribute a JOIN pg_stats s ON (s.schemaname = n.nspname AND s.tablename = c.relname AND s.attname = a.attname) LEFT JOIN LATERAL unnest(s.most_common_freqs) u ON TRUE WHERE a.attrelid = x.indrelid AND a.attnum = ANY(x.indkey) GROUP BY a.attnum ORDER BY array_position(x.indkey, a.attnum))
+    (SELECT max(null_frac) + (1 - max(null_frac))*coalesce(SUM(u), 0) AS f FROM pg_attribute a JOIN pg_stats s ON (s.schemaname = n.nspname AND s.tablename = c.relname AND s.attname = a.attname) LEFT JOIN LATERAL unnest(s.most_common_freqs) u ON TRUE WHERE a.attrelid = x.indrelid AND a.attnum = ANY(x.indkey) GROUP BY a.attnum ORDER BY array_position(x.indkey, a.attnum))
     UNION ALL 
-    (SELECT max(null_frac) + (1 - max(null_frac))*SUM(u2) AS f FROM pg_stats s2 LEFT JOIN LATERAL unnest(s2.most_common_freqs) u2 ON true WHERE s2.schemaname = n.nspname AND s2.tablename = i.relname GROUP BY s2.attname)
+    (SELECT max(null_frac) + (1 - max(null_frac))*coalesce(SUM(u2), 0) AS f FROM pg_stats s2 LEFT JOIN LATERAL unnest(s2.most_common_freqs) u2 ON true WHERE s2.schemaname = n.nspname AND s2.tablename = i.relname GROUP BY s2.attname)
   ) t
   ) AS sum_most_common_freqs
  FROM pg_index x
