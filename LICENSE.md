@@ -1,6 +1,6 @@
 Useful PostgreSQL utilities.
 
-Copyright (c) 2011-2014, PostgreSQL-Consulting.com
+Copyright (c) 2011-2023, Data Egret GMBH (Previously known as PostgreSQL-Consulting.com)
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose, without fee, and without a written
