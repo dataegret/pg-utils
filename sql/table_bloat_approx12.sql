@@ -5,16 +5,16 @@
 select table_name,
 pg_size_pretty(relation_size + toast_relation_size) as total_size,
 pg_size_pretty(toast_relation_size) as toast_size,
-round(greatest(((relation_size * fillfactor/100)::numeric - tuple_len) / greatest((relation_size * fillfactor/100)::numeric, 1) * 100, 0)::numeric, 1) AS table_waste_percent,
-pg_size_pretty((relation_size * fillfactor/100 - tuple_len)::bigint) AS table_waste,
-round((((relation_size * fillfactor/100) + toast_relation_size - (tuple_len + toast_tuple_len))::numeric / greatest((relation_size * fillfactor/100) + toast_relation_size, 1)::numeric) * 100, 1) AS total_waste_percent,
-pg_size_pretty(((relation_size * fillfactor/100) + toast_relation_size - (tuple_len + toast_tuple_len))::bigint) AS total_waste
+round(((relation_size - (relation_size - free_space)*100/fillfactor)*100/greatest(relation_size, 1))::numeric, 1) table_waste_percent,
+pg_size_pretty((relation_size - (relation_size - free_space)*100/fillfactor)::bigint) table_waste,
+round(((toast_free_space + relation_size - (relation_size - free_space)*100/fillfactor)*100/greatest(relation_size + toast_relation_size, 1))::numeric, 1) total_waste_percent,
+pg_size_pretty((toast_free_space + relation_size - (relation_size - free_space)*100/fillfactor)::bigint) total_waste
 from (
     select
     (case when n.nspname = 'public' then format('%I', c.relname) else format('%I.%I', n.nspname, c.relname) end) as table_name,
-    (select  approx_tuple_len  from pgstattuple_approx(c.oid)) as tuple_len,
+    (select approx_free_space from pgstattuple_approx(c.oid)) as free_space,
     pg_relation_size(c.oid) as relation_size,
-    (case when reltoastrelid = 0 then 0 else (select  approx_tuple_len  from pgstattuple_approx(c.reltoastrelid)) end) as toast_tuple_len,
+    (case when reltoastrelid = 0 then 0 else (select free_space from pgstattuple(c.reltoastrelid)) end) as toast_free_space,
     coalesce(pg_relation_size(c.reltoastrelid), 0) as toast_relation_size,
     coalesce((SELECT (regexp_matches(reloptions::text, E'.*fillfactor=(\\d+).*'))[1]),'100')::real AS fillfactor
     from pg_class c
@@ -24,5 +24,5 @@ from (
     --put your table name/mask here
     and relname ~ :'tablename'
 ) t
-order by total_waste_percent desc
+order by (toast_free_space + relation_size - (relation_size - free_space)*100/fillfactor) desc
 limit 20;
