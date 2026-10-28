@@ -16,6 +16,6 @@ JOIN pg_class c ON c.oid=relid
 LEFT JOIN pg_tablespace t ON t.oid=c.reltablespace
 WHERE
 (coalesce(n_tup_ins,0)+coalesce(n_tup_upd,0)+coalesce(n_tup_del,0))>0
-and pg_stat_all_tables.schemaname not in ('pg_catalog', 'pg_global')
+--and pg_stat_all_tables.schemaname not in ('pg_catalog', 'pg_global')
 order by total desc limit 50;
 
